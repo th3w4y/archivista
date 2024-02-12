@@ -169,6 +169,29 @@ func HasAttestationCollectionsWith(preds ...predicate.AttestationCollection) pre
 	})
 }
 
+// HasAttributesReport applies the HasEdge predicate on the "attributes_report" edge.
+func HasAttributesReport() predicate.Statement {
+	return predicate.Statement(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, AttributesReportTable, AttributesReportColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasAttributesReportWith applies the HasEdge predicate on the "attributes_report" edge with a given conditions (other predicates).
+func HasAttributesReportWith(preds ...predicate.AttributeReport) predicate.Statement {
+	return predicate.Statement(func(s *sql.Selector) {
+		step := newAttributesReportStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // HasDsse applies the HasEdge predicate on the "dsse" edge.
 func HasDsse() predicate.Statement {
 	return predicate.Statement(func(s *sql.Selector) {

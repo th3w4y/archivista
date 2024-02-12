@@ -16,6 +16,8 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/in-toto/archivista/ent/attestation"
 	"github.com/in-toto/archivista/ent/attestationcollection"
+	"github.com/in-toto/archivista/ent/attributeassertion"
+	"github.com/in-toto/archivista/ent/attributereport"
 	"github.com/in-toto/archivista/ent/dsse"
 	"github.com/in-toto/archivista/ent/payloaddigest"
 	"github.com/in-toto/archivista/ent/signature"
@@ -36,6 +38,12 @@ func (n *Attestation) IsNode() {}
 
 // IsNode implements the Node interface check for GQLGen.
 func (n *AttestationCollection) IsNode() {}
+
+// IsNode implements the Node interface check for GQLGen.
+func (n *AttributeAssertion) IsNode() {}
+
+// IsNode implements the Node interface check for GQLGen.
+func (n *AttributeReport) IsNode() {}
 
 // IsNode implements the Node interface check for GQLGen.
 func (n *Dsse) IsNode() {}
@@ -132,6 +140,30 @@ func (c *Client) noder(ctx context.Context, table string, id int) (Noder, error)
 		query := c.AttestationCollection.Query().
 			Where(attestationcollection.ID(id))
 		query, err := query.CollectFields(ctx, "AttestationCollection")
+		if err != nil {
+			return nil, err
+		}
+		n, err := query.Only(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return n, nil
+	case attributeassertion.Table:
+		query := c.AttributeAssertion.Query().
+			Where(attributeassertion.ID(id))
+		query, err := query.CollectFields(ctx, "AttributeAssertion")
+		if err != nil {
+			return nil, err
+		}
+		n, err := query.Only(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return n, nil
+	case attributereport.Table:
+		query := c.AttributeReport.Query().
+			Where(attributereport.ID(id))
+		query, err := query.CollectFields(ctx, "AttributeReport")
 		if err != nil {
 			return nil, err
 		}
@@ -317,6 +349,38 @@ func (c *Client) noders(ctx context.Context, table string, ids []int) ([]Noder, 
 		query := c.AttestationCollection.Query().
 			Where(attestationcollection.IDIn(ids...))
 		query, err := query.CollectFields(ctx, "AttestationCollection")
+		if err != nil {
+			return nil, err
+		}
+		nodes, err := query.All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, node := range nodes {
+			for _, noder := range idmap[node.ID] {
+				*noder = node
+			}
+		}
+	case attributeassertion.Table:
+		query := c.AttributeAssertion.Query().
+			Where(attributeassertion.IDIn(ids...))
+		query, err := query.CollectFields(ctx, "AttributeAssertion")
+		if err != nil {
+			return nil, err
+		}
+		nodes, err := query.All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, node := range nodes {
+			for _, noder := range idmap[node.ID] {
+				*noder = node
+			}
+		}
+	case attributereport.Table:
+		query := c.AttributeReport.Query().
+			Where(attributereport.IDIn(ids...))
+		query, err := query.CollectFields(ctx, "AttributeReport")
 		if err != nil {
 			return nil, err
 		}

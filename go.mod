@@ -78,3 +78,5 @@ require (
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace github.com/in-toto/archivista => github.com/th3w4y/archivista v0.4.0

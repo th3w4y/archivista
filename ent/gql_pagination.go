@@ -13,6 +13,8 @@ import (
 	"github.com/99designs/gqlgen/graphql/errcode"
 	"github.com/in-toto/archivista/ent/attestation"
 	"github.com/in-toto/archivista/ent/attestationcollection"
+	"github.com/in-toto/archivista/ent/attributeassertion"
+	"github.com/in-toto/archivista/ent/attributereport"
 	"github.com/in-toto/archivista/ent/dsse"
 	"github.com/in-toto/archivista/ent/payloaddigest"
 	"github.com/in-toto/archivista/ent/signature"
@@ -592,6 +594,498 @@ func (ac *AttestationCollection) ToEdge(order *AttestationCollectionOrder) *Atte
 	return &AttestationCollectionEdge{
 		Node:   ac,
 		Cursor: order.Field.toCursor(ac),
+	}
+}
+
+// AttributeAssertionEdge is the edge representation of AttributeAssertion.
+type AttributeAssertionEdge struct {
+	Node   *AttributeAssertion `json:"node"`
+	Cursor Cursor              `json:"cursor"`
+}
+
+// AttributeAssertionConnection is the connection containing edges to AttributeAssertion.
+type AttributeAssertionConnection struct {
+	Edges      []*AttributeAssertionEdge `json:"edges"`
+	PageInfo   PageInfo                  `json:"pageInfo"`
+	TotalCount int                       `json:"totalCount"`
+}
+
+func (c *AttributeAssertionConnection) build(nodes []*AttributeAssertion, pager *attributeassertionPager, after *Cursor, first *int, before *Cursor, last *int) {
+	c.PageInfo.HasNextPage = before != nil
+	c.PageInfo.HasPreviousPage = after != nil
+	if first != nil && *first+1 == len(nodes) {
+		c.PageInfo.HasNextPage = true
+		nodes = nodes[:len(nodes)-1]
+	} else if last != nil && *last+1 == len(nodes) {
+		c.PageInfo.HasPreviousPage = true
+		nodes = nodes[:len(nodes)-1]
+	}
+	var nodeAt func(int) *AttributeAssertion
+	if last != nil {
+		n := len(nodes) - 1
+		nodeAt = func(i int) *AttributeAssertion {
+			return nodes[n-i]
+		}
+	} else {
+		nodeAt = func(i int) *AttributeAssertion {
+			return nodes[i]
+		}
+	}
+	c.Edges = make([]*AttributeAssertionEdge, len(nodes))
+	for i := range nodes {
+		node := nodeAt(i)
+		c.Edges[i] = &AttributeAssertionEdge{
+			Node:   node,
+			Cursor: pager.toCursor(node),
+		}
+	}
+	if l := len(c.Edges); l > 0 {
+		c.PageInfo.StartCursor = &c.Edges[0].Cursor
+		c.PageInfo.EndCursor = &c.Edges[l-1].Cursor
+	}
+	if c.TotalCount == 0 {
+		c.TotalCount = len(nodes)
+	}
+}
+
+// AttributeAssertionPaginateOption enables pagination customization.
+type AttributeAssertionPaginateOption func(*attributeassertionPager) error
+
+// WithAttributeAssertionOrder configures pagination ordering.
+func WithAttributeAssertionOrder(order *AttributeAssertionOrder) AttributeAssertionPaginateOption {
+	if order == nil {
+		order = DefaultAttributeAssertionOrder
+	}
+	o := *order
+	return func(pager *attributeassertionPager) error {
+		if err := o.Direction.Validate(); err != nil {
+			return err
+		}
+		if o.Field == nil {
+			o.Field = DefaultAttributeAssertionOrder.Field
+		}
+		pager.order = &o
+		return nil
+	}
+}
+
+// WithAttributeAssertionFilter configures pagination filter.
+func WithAttributeAssertionFilter(filter func(*AttributeAssertionQuery) (*AttributeAssertionQuery, error)) AttributeAssertionPaginateOption {
+	return func(pager *attributeassertionPager) error {
+		if filter == nil {
+			return errors.New("AttributeAssertionQuery filter cannot be nil")
+		}
+		pager.filter = filter
+		return nil
+	}
+}
+
+type attributeassertionPager struct {
+	reverse bool
+	order   *AttributeAssertionOrder
+	filter  func(*AttributeAssertionQuery) (*AttributeAssertionQuery, error)
+}
+
+func newAttributeAssertionPager(opts []AttributeAssertionPaginateOption, reverse bool) (*attributeassertionPager, error) {
+	pager := &attributeassertionPager{reverse: reverse}
+	for _, opt := range opts {
+		if err := opt(pager); err != nil {
+			return nil, err
+		}
+	}
+	if pager.order == nil {
+		pager.order = DefaultAttributeAssertionOrder
+	}
+	return pager, nil
+}
+
+func (p *attributeassertionPager) applyFilter(query *AttributeAssertionQuery) (*AttributeAssertionQuery, error) {
+	if p.filter != nil {
+		return p.filter(query)
+	}
+	return query, nil
+}
+
+func (p *attributeassertionPager) toCursor(aa *AttributeAssertion) Cursor {
+	return p.order.Field.toCursor(aa)
+}
+
+func (p *attributeassertionPager) applyCursors(query *AttributeAssertionQuery, after, before *Cursor) (*AttributeAssertionQuery, error) {
+	direction := p.order.Direction
+	if p.reverse {
+		direction = direction.Reverse()
+	}
+	for _, predicate := range entgql.CursorsPredicate(after, before, DefaultAttributeAssertionOrder.Field.column, p.order.Field.column, direction) {
+		query = query.Where(predicate)
+	}
+	return query, nil
+}
+
+func (p *attributeassertionPager) applyOrder(query *AttributeAssertionQuery) *AttributeAssertionQuery {
+	direction := p.order.Direction
+	if p.reverse {
+		direction = direction.Reverse()
+	}
+	query = query.Order(p.order.Field.toTerm(direction.OrderTermOption()))
+	if p.order.Field != DefaultAttributeAssertionOrder.Field {
+		query = query.Order(DefaultAttributeAssertionOrder.Field.toTerm(direction.OrderTermOption()))
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(p.order.Field.column)
+	}
+	return query
+}
+
+func (p *attributeassertionPager) orderExpr(query *AttributeAssertionQuery) sql.Querier {
+	direction := p.order.Direction
+	if p.reverse {
+		direction = direction.Reverse()
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(p.order.Field.column)
+	}
+	return sql.ExprFunc(func(b *sql.Builder) {
+		b.Ident(p.order.Field.column).Pad().WriteString(string(direction))
+		if p.order.Field != DefaultAttributeAssertionOrder.Field {
+			b.Comma().Ident(DefaultAttributeAssertionOrder.Field.column).Pad().WriteString(string(direction))
+		}
+	})
+}
+
+// Paginate executes the query and returns a relay based cursor connection to AttributeAssertion.
+func (aa *AttributeAssertionQuery) Paginate(
+	ctx context.Context, after *Cursor, first *int,
+	before *Cursor, last *int, opts ...AttributeAssertionPaginateOption,
+) (*AttributeAssertionConnection, error) {
+	if err := validateFirstLast(first, last); err != nil {
+		return nil, err
+	}
+	pager, err := newAttributeAssertionPager(opts, last != nil)
+	if err != nil {
+		return nil, err
+	}
+	if aa, err = pager.applyFilter(aa); err != nil {
+		return nil, err
+	}
+	conn := &AttributeAssertionConnection{Edges: []*AttributeAssertionEdge{}}
+	ignoredEdges := !hasCollectedField(ctx, edgesField)
+	if hasCollectedField(ctx, totalCountField) || hasCollectedField(ctx, pageInfoField) {
+		hasPagination := after != nil || first != nil || before != nil || last != nil
+		if hasPagination || ignoredEdges {
+			if conn.TotalCount, err = aa.Clone().Count(ctx); err != nil {
+				return nil, err
+			}
+			conn.PageInfo.HasNextPage = first != nil && conn.TotalCount > 0
+			conn.PageInfo.HasPreviousPage = last != nil && conn.TotalCount > 0
+		}
+	}
+	if ignoredEdges || (first != nil && *first == 0) || (last != nil && *last == 0) {
+		return conn, nil
+	}
+	if aa, err = pager.applyCursors(aa, after, before); err != nil {
+		return nil, err
+	}
+	if limit := paginateLimit(first, last); limit != 0 {
+		aa.Limit(limit)
+	}
+	if field := collectedField(ctx, edgesField, nodeField); field != nil {
+		if err := aa.collectField(ctx, graphql.GetOperationContext(ctx), *field, []string{edgesField, nodeField}); err != nil {
+			return nil, err
+		}
+	}
+	aa = pager.applyOrder(aa)
+	nodes, err := aa.All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	conn.build(nodes, pager, after, first, before, last)
+	return conn, nil
+}
+
+// AttributeAssertionOrderField defines the ordering field of AttributeAssertion.
+type AttributeAssertionOrderField struct {
+	// Value extracts the ordering value from the given AttributeAssertion.
+	Value    func(*AttributeAssertion) (ent.Value, error)
+	column   string // field or computed.
+	toTerm   func(...sql.OrderTermOption) attributeassertion.OrderOption
+	toCursor func(*AttributeAssertion) Cursor
+}
+
+// AttributeAssertionOrder defines the ordering of AttributeAssertion.
+type AttributeAssertionOrder struct {
+	Direction OrderDirection                `json:"direction"`
+	Field     *AttributeAssertionOrderField `json:"field"`
+}
+
+// DefaultAttributeAssertionOrder is the default ordering of AttributeAssertion.
+var DefaultAttributeAssertionOrder = &AttributeAssertionOrder{
+	Direction: entgql.OrderDirectionAsc,
+	Field: &AttributeAssertionOrderField{
+		Value: func(aa *AttributeAssertion) (ent.Value, error) {
+			return aa.ID, nil
+		},
+		column: attributeassertion.FieldID,
+		toTerm: attributeassertion.ByID,
+		toCursor: func(aa *AttributeAssertion) Cursor {
+			return Cursor{ID: aa.ID}
+		},
+	},
+}
+
+// ToEdge converts AttributeAssertion into AttributeAssertionEdge.
+func (aa *AttributeAssertion) ToEdge(order *AttributeAssertionOrder) *AttributeAssertionEdge {
+	if order == nil {
+		order = DefaultAttributeAssertionOrder
+	}
+	return &AttributeAssertionEdge{
+		Node:   aa,
+		Cursor: order.Field.toCursor(aa),
+	}
+}
+
+// AttributeReportEdge is the edge representation of AttributeReport.
+type AttributeReportEdge struct {
+	Node   *AttributeReport `json:"node"`
+	Cursor Cursor           `json:"cursor"`
+}
+
+// AttributeReportConnection is the connection containing edges to AttributeReport.
+type AttributeReportConnection struct {
+	Edges      []*AttributeReportEdge `json:"edges"`
+	PageInfo   PageInfo               `json:"pageInfo"`
+	TotalCount int                    `json:"totalCount"`
+}
+
+func (c *AttributeReportConnection) build(nodes []*AttributeReport, pager *attributereportPager, after *Cursor, first *int, before *Cursor, last *int) {
+	c.PageInfo.HasNextPage = before != nil
+	c.PageInfo.HasPreviousPage = after != nil
+	if first != nil && *first+1 == len(nodes) {
+		c.PageInfo.HasNextPage = true
+		nodes = nodes[:len(nodes)-1]
+	} else if last != nil && *last+1 == len(nodes) {
+		c.PageInfo.HasPreviousPage = true
+		nodes = nodes[:len(nodes)-1]
+	}
+	var nodeAt func(int) *AttributeReport
+	if last != nil {
+		n := len(nodes) - 1
+		nodeAt = func(i int) *AttributeReport {
+			return nodes[n-i]
+		}
+	} else {
+		nodeAt = func(i int) *AttributeReport {
+			return nodes[i]
+		}
+	}
+	c.Edges = make([]*AttributeReportEdge, len(nodes))
+	for i := range nodes {
+		node := nodeAt(i)
+		c.Edges[i] = &AttributeReportEdge{
+			Node:   node,
+			Cursor: pager.toCursor(node),
+		}
+	}
+	if l := len(c.Edges); l > 0 {
+		c.PageInfo.StartCursor = &c.Edges[0].Cursor
+		c.PageInfo.EndCursor = &c.Edges[l-1].Cursor
+	}
+	if c.TotalCount == 0 {
+		c.TotalCount = len(nodes)
+	}
+}
+
+// AttributeReportPaginateOption enables pagination customization.
+type AttributeReportPaginateOption func(*attributereportPager) error
+
+// WithAttributeReportOrder configures pagination ordering.
+func WithAttributeReportOrder(order *AttributeReportOrder) AttributeReportPaginateOption {
+	if order == nil {
+		order = DefaultAttributeReportOrder
+	}
+	o := *order
+	return func(pager *attributereportPager) error {
+		if err := o.Direction.Validate(); err != nil {
+			return err
+		}
+		if o.Field == nil {
+			o.Field = DefaultAttributeReportOrder.Field
+		}
+		pager.order = &o
+		return nil
+	}
+}
+
+// WithAttributeReportFilter configures pagination filter.
+func WithAttributeReportFilter(filter func(*AttributeReportQuery) (*AttributeReportQuery, error)) AttributeReportPaginateOption {
+	return func(pager *attributereportPager) error {
+		if filter == nil {
+			return errors.New("AttributeReportQuery filter cannot be nil")
+		}
+		pager.filter = filter
+		return nil
+	}
+}
+
+type attributereportPager struct {
+	reverse bool
+	order   *AttributeReportOrder
+	filter  func(*AttributeReportQuery) (*AttributeReportQuery, error)
+}
+
+func newAttributeReportPager(opts []AttributeReportPaginateOption, reverse bool) (*attributereportPager, error) {
+	pager := &attributereportPager{reverse: reverse}
+	for _, opt := range opts {
+		if err := opt(pager); err != nil {
+			return nil, err
+		}
+	}
+	if pager.order == nil {
+		pager.order = DefaultAttributeReportOrder
+	}
+	return pager, nil
+}
+
+func (p *attributereportPager) applyFilter(query *AttributeReportQuery) (*AttributeReportQuery, error) {
+	if p.filter != nil {
+		return p.filter(query)
+	}
+	return query, nil
+}
+
+func (p *attributereportPager) toCursor(ar *AttributeReport) Cursor {
+	return p.order.Field.toCursor(ar)
+}
+
+func (p *attributereportPager) applyCursors(query *AttributeReportQuery, after, before *Cursor) (*AttributeReportQuery, error) {
+	direction := p.order.Direction
+	if p.reverse {
+		direction = direction.Reverse()
+	}
+	for _, predicate := range entgql.CursorsPredicate(after, before, DefaultAttributeReportOrder.Field.column, p.order.Field.column, direction) {
+		query = query.Where(predicate)
+	}
+	return query, nil
+}
+
+func (p *attributereportPager) applyOrder(query *AttributeReportQuery) *AttributeReportQuery {
+	direction := p.order.Direction
+	if p.reverse {
+		direction = direction.Reverse()
+	}
+	query = query.Order(p.order.Field.toTerm(direction.OrderTermOption()))
+	if p.order.Field != DefaultAttributeReportOrder.Field {
+		query = query.Order(DefaultAttributeReportOrder.Field.toTerm(direction.OrderTermOption()))
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(p.order.Field.column)
+	}
+	return query
+}
+
+func (p *attributereportPager) orderExpr(query *AttributeReportQuery) sql.Querier {
+	direction := p.order.Direction
+	if p.reverse {
+		direction = direction.Reverse()
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(p.order.Field.column)
+	}
+	return sql.ExprFunc(func(b *sql.Builder) {
+		b.Ident(p.order.Field.column).Pad().WriteString(string(direction))
+		if p.order.Field != DefaultAttributeReportOrder.Field {
+			b.Comma().Ident(DefaultAttributeReportOrder.Field.column).Pad().WriteString(string(direction))
+		}
+	})
+}
+
+// Paginate executes the query and returns a relay based cursor connection to AttributeReport.
+func (ar *AttributeReportQuery) Paginate(
+	ctx context.Context, after *Cursor, first *int,
+	before *Cursor, last *int, opts ...AttributeReportPaginateOption,
+) (*AttributeReportConnection, error) {
+	if err := validateFirstLast(first, last); err != nil {
+		return nil, err
+	}
+	pager, err := newAttributeReportPager(opts, last != nil)
+	if err != nil {
+		return nil, err
+	}
+	if ar, err = pager.applyFilter(ar); err != nil {
+		return nil, err
+	}
+	conn := &AttributeReportConnection{Edges: []*AttributeReportEdge{}}
+	ignoredEdges := !hasCollectedField(ctx, edgesField)
+	if hasCollectedField(ctx, totalCountField) || hasCollectedField(ctx, pageInfoField) {
+		hasPagination := after != nil || first != nil || before != nil || last != nil
+		if hasPagination || ignoredEdges {
+			if conn.TotalCount, err = ar.Clone().Count(ctx); err != nil {
+				return nil, err
+			}
+			conn.PageInfo.HasNextPage = first != nil && conn.TotalCount > 0
+			conn.PageInfo.HasPreviousPage = last != nil && conn.TotalCount > 0
+		}
+	}
+	if ignoredEdges || (first != nil && *first == 0) || (last != nil && *last == 0) {
+		return conn, nil
+	}
+	if ar, err = pager.applyCursors(ar, after, before); err != nil {
+		return nil, err
+	}
+	if limit := paginateLimit(first, last); limit != 0 {
+		ar.Limit(limit)
+	}
+	if field := collectedField(ctx, edgesField, nodeField); field != nil {
+		if err := ar.collectField(ctx, graphql.GetOperationContext(ctx), *field, []string{edgesField, nodeField}); err != nil {
+			return nil, err
+		}
+	}
+	ar = pager.applyOrder(ar)
+	nodes, err := ar.All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	conn.build(nodes, pager, after, first, before, last)
+	return conn, nil
+}
+
+// AttributeReportOrderField defines the ordering field of AttributeReport.
+type AttributeReportOrderField struct {
+	// Value extracts the ordering value from the given AttributeReport.
+	Value    func(*AttributeReport) (ent.Value, error)
+	column   string // field or computed.
+	toTerm   func(...sql.OrderTermOption) attributereport.OrderOption
+	toCursor func(*AttributeReport) Cursor
+}
+
+// AttributeReportOrder defines the ordering of AttributeReport.
+type AttributeReportOrder struct {
+	Direction OrderDirection             `json:"direction"`
+	Field     *AttributeReportOrderField `json:"field"`
+}
+
+// DefaultAttributeReportOrder is the default ordering of AttributeReport.
+var DefaultAttributeReportOrder = &AttributeReportOrder{
+	Direction: entgql.OrderDirectionAsc,
+	Field: &AttributeReportOrderField{
+		Value: func(ar *AttributeReport) (ent.Value, error) {
+			return ar.ID, nil
+		},
+		column: attributereport.FieldID,
+		toTerm: attributereport.ByID,
+		toCursor: func(ar *AttributeReport) Cursor {
+			return Cursor{ID: ar.ID}
+		},
+	},
+}
+
+// ToEdge converts AttributeReport into AttributeReportEdge.
+func (ar *AttributeReport) ToEdge(order *AttributeReportOrder) *AttributeReportEdge {
+	if order == nil {
+		order = DefaultAttributeReportOrder
+	}
+	return &AttributeReportEdge{
+		Node:   ar,
+		Cursor: order.Field.toCursor(ar),
 	}
 }
 

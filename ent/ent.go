@@ -14,6 +14,8 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/in-toto/archivista/ent/attestation"
 	"github.com/in-toto/archivista/ent/attestationcollection"
+	"github.com/in-toto/archivista/ent/attributeassertion"
+	"github.com/in-toto/archivista/ent/attributereport"
 	"github.com/in-toto/archivista/ent/dsse"
 	"github.com/in-toto/archivista/ent/payloaddigest"
 	"github.com/in-toto/archivista/ent/signature"
@@ -83,6 +85,8 @@ func checkColumn(table, column string) error {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
 			attestation.Table:           attestation.ValidColumn,
 			attestationcollection.Table: attestationcollection.ValidColumn,
+			attributeassertion.Table:    attributeassertion.ValidColumn,
+			attributereport.Table:       attributereport.ValidColumn,
 			dsse.Table:                  dsse.ValidColumn,
 			payloaddigest.Table:         payloaddigest.ValidColumn,
 			signature.Table:             signature.ValidColumn,

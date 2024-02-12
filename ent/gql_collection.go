@@ -11,6 +11,7 @@ import (
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/in-toto/archivista/ent/attestation"
 	"github.com/in-toto/archivista/ent/attestationcollection"
+	"github.com/in-toto/archivista/ent/attributeassertion"
 	"github.com/in-toto/archivista/ent/dsse"
 	"github.com/in-toto/archivista/ent/payloaddigest"
 	"github.com/in-toto/archivista/ent/signature"
@@ -182,6 +183,170 @@ func newAttestationCollectionPaginateArgs(rv map[string]any) *attestationcollect
 	}
 	if v, ok := rv[whereField].(*AttestationCollectionWhereInput); ok {
 		args.opts = append(args.opts, WithAttestationCollectionFilter(v.Filter))
+	}
+	return args
+}
+
+// CollectFields tells the query-builder to eagerly load connected nodes by resolver context.
+func (aa *AttributeAssertionQuery) CollectFields(ctx context.Context, satisfies ...string) (*AttributeAssertionQuery, error) {
+	fc := graphql.GetFieldContext(ctx)
+	if fc == nil {
+		return aa, nil
+	}
+	if err := aa.collectField(ctx, graphql.GetOperationContext(ctx), fc.Field, nil, satisfies...); err != nil {
+		return nil, err
+	}
+	return aa, nil
+}
+
+func (aa *AttributeAssertionQuery) collectField(ctx context.Context, opCtx *graphql.OperationContext, collected graphql.CollectedField, path []string, satisfies ...string) error {
+	path = append([]string(nil), path...)
+	var (
+		unknownSeen    bool
+		fieldSeen      = make(map[string]struct{}, len(attributeassertion.Columns))
+		selectedFields = []string{attributeassertion.FieldID}
+	)
+	for _, field := range graphql.CollectFields(opCtx, collected.Selections, satisfies) {
+		switch field.Name {
+		case "attributesReport":
+			var (
+				alias = field.Alias
+				path  = append(path, alias)
+				query = (&AttributeReportClient{config: aa.config}).Query()
+			)
+			if err := query.collectField(ctx, opCtx, field, path, satisfies...); err != nil {
+				return err
+			}
+			aa.withAttributesReport = query
+		case "attribute":
+			if _, ok := fieldSeen[attributeassertion.FieldAttribute]; !ok {
+				selectedFields = append(selectedFields, attributeassertion.FieldAttribute)
+				fieldSeen[attributeassertion.FieldAttribute] = struct{}{}
+			}
+		case "target":
+			if _, ok := fieldSeen[attributeassertion.FieldTarget]; !ok {
+				selectedFields = append(selectedFields, attributeassertion.FieldTarget)
+				fieldSeen[attributeassertion.FieldTarget] = struct{}{}
+			}
+		case "conditions":
+			if _, ok := fieldSeen[attributeassertion.FieldConditions]; !ok {
+				selectedFields = append(selectedFields, attributeassertion.FieldConditions)
+				fieldSeen[attributeassertion.FieldConditions] = struct{}{}
+			}
+		case "evidence":
+			if _, ok := fieldSeen[attributeassertion.FieldEvidence]; !ok {
+				selectedFields = append(selectedFields, attributeassertion.FieldEvidence)
+				fieldSeen[attributeassertion.FieldEvidence] = struct{}{}
+			}
+		case "id":
+		case "__typename":
+		default:
+			unknownSeen = true
+		}
+	}
+	if !unknownSeen {
+		aa.Select(selectedFields...)
+	}
+	return nil
+}
+
+type attributeassertionPaginateArgs struct {
+	first, last   *int
+	after, before *Cursor
+	opts          []AttributeAssertionPaginateOption
+}
+
+func newAttributeAssertionPaginateArgs(rv map[string]any) *attributeassertionPaginateArgs {
+	args := &attributeassertionPaginateArgs{}
+	if rv == nil {
+		return args
+	}
+	if v := rv[firstField]; v != nil {
+		args.first = v.(*int)
+	}
+	if v := rv[lastField]; v != nil {
+		args.last = v.(*int)
+	}
+	if v := rv[afterField]; v != nil {
+		args.after = v.(*Cursor)
+	}
+	if v := rv[beforeField]; v != nil {
+		args.before = v.(*Cursor)
+	}
+	if v, ok := rv[whereField].(*AttributeAssertionWhereInput); ok {
+		args.opts = append(args.opts, WithAttributeAssertionFilter(v.Filter))
+	}
+	return args
+}
+
+// CollectFields tells the query-builder to eagerly load connected nodes by resolver context.
+func (ar *AttributeReportQuery) CollectFields(ctx context.Context, satisfies ...string) (*AttributeReportQuery, error) {
+	fc := graphql.GetFieldContext(ctx)
+	if fc == nil {
+		return ar, nil
+	}
+	if err := ar.collectField(ctx, graphql.GetOperationContext(ctx), fc.Field, nil, satisfies...); err != nil {
+		return nil, err
+	}
+	return ar, nil
+}
+
+func (ar *AttributeReportQuery) collectField(ctx context.Context, opCtx *graphql.OperationContext, collected graphql.CollectedField, path []string, satisfies ...string) error {
+	path = append([]string(nil), path...)
+	for _, field := range graphql.CollectFields(opCtx, collected.Selections, satisfies) {
+		switch field.Name {
+		case "attributes":
+			var (
+				alias = field.Alias
+				path  = append(path, alias)
+				query = (&AttributeAssertionClient{config: ar.config}).Query()
+			)
+			if err := query.collectField(ctx, opCtx, field, path, satisfies...); err != nil {
+				return err
+			}
+			ar.WithNamedAttributes(alias, func(wq *AttributeAssertionQuery) {
+				*wq = *query
+			})
+		case "statement":
+			var (
+				alias = field.Alias
+				path  = append(path, alias)
+				query = (&StatementClient{config: ar.config}).Query()
+			)
+			if err := query.collectField(ctx, opCtx, field, path, satisfies...); err != nil {
+				return err
+			}
+			ar.withStatement = query
+		}
+	}
+	return nil
+}
+
+type attributereportPaginateArgs struct {
+	first, last   *int
+	after, before *Cursor
+	opts          []AttributeReportPaginateOption
+}
+
+func newAttributeReportPaginateArgs(rv map[string]any) *attributereportPaginateArgs {
+	args := &attributereportPaginateArgs{}
+	if rv == nil {
+		return args
+	}
+	if v := rv[firstField]; v != nil {
+		args.first = v.(*int)
+	}
+	if v := rv[lastField]; v != nil {
+		args.last = v.(*int)
+	}
+	if v := rv[afterField]; v != nil {
+		args.after = v.(*Cursor)
+	}
+	if v := rv[beforeField]; v != nil {
+		args.before = v.(*Cursor)
+	}
+	if v, ok := rv[whereField].(*AttributeReportWhereInput); ok {
+		args.opts = append(args.opts, WithAttributeReportFilter(v.Filter))
 	}
 	return args
 }
@@ -583,6 +748,16 @@ func (s *StatementQuery) collectField(ctx context.Context, opCtx *graphql.Operat
 				return err
 			}
 			s.withAttestationCollections = query
+		case "attributesReport":
+			var (
+				alias = field.Alias
+				path  = append(path, alias)
+				query = (&AttributeReportClient{config: s.config}).Query()
+			)
+			if err := query.collectField(ctx, opCtx, field, path, satisfies...); err != nil {
+				return err
+			}
+			s.withAttributesReport = query
 		case "dsse":
 			var (
 				alias = field.Alias

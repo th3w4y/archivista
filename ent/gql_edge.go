@@ -36,6 +36,34 @@ func (ac *AttestationCollection) Statement(ctx context.Context) (*Statement, err
 	return result, err
 }
 
+func (aa *AttributeAssertion) AttributesReport(ctx context.Context) (*AttributeReport, error) {
+	result, err := aa.Edges.AttributesReportOrErr()
+	if IsNotLoaded(err) {
+		result, err = aa.QueryAttributesReport().Only(ctx)
+	}
+	return result, err
+}
+
+func (ar *AttributeReport) Attributes(ctx context.Context) (result []*AttributeAssertion, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = ar.NamedAttributes(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = ar.Edges.AttributesOrErr()
+	}
+	if IsNotLoaded(err) {
+		result, err = ar.QueryAttributes().All(ctx)
+	}
+	return result, err
+}
+
+func (ar *AttributeReport) Statement(ctx context.Context) (*Statement, error) {
+	result, err := ar.Edges.StatementOrErr()
+	if IsNotLoaded(err) {
+		result, err = ar.QueryStatement().Only(ctx)
+	}
+	return result, err
+}
+
 func (d *Dsse) Statement(ctx context.Context) (*Statement, error) {
 	result, err := d.Edges.StatementOrErr()
 	if IsNotLoaded(err) {
@@ -120,6 +148,14 @@ func (s *Statement) AttestationCollections(ctx context.Context) (*AttestationCol
 	result, err := s.Edges.AttestationCollectionsOrErr()
 	if IsNotLoaded(err) {
 		result, err = s.QueryAttestationCollections().Only(ctx)
+	}
+	return result, MaskNotFound(err)
+}
+
+func (s *Statement) AttributesReport(ctx context.Context) (*AttributeReport, error) {
+	result, err := s.Edges.AttributesReportOrErr()
+	if IsNotLoaded(err) {
+		result, err = s.QueryAttributesReport().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }

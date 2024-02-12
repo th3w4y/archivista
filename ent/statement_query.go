@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/in-toto/archivista/ent/attestationcollection"
+	"github.com/in-toto/archivista/ent/attributereport"
 	"github.com/in-toto/archivista/ent/dsse"
 	"github.com/in-toto/archivista/ent/predicate"
 	"github.com/in-toto/archivista/ent/statement"
@@ -27,6 +28,7 @@ type StatementQuery struct {
 	predicates                 []predicate.Statement
 	withSubjects               *SubjectQuery
 	withAttestationCollections *AttestationCollectionQuery
+	withAttributesReport       *AttributeReportQuery
 	withDsse                   *DsseQuery
 	modifiers                  []func(*sql.Selector)
 	loadTotal                  []func(context.Context, []*Statement) error
@@ -105,6 +107,28 @@ func (sq *StatementQuery) QueryAttestationCollections() *AttestationCollectionQu
 			sqlgraph.From(statement.Table, statement.FieldID, selector),
 			sqlgraph.To(attestationcollection.Table, attestationcollection.FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, false, statement.AttestationCollectionsTable, statement.AttestationCollectionsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(sq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryAttributesReport chains the current query on the "attributes_report" edge.
+func (sq *StatementQuery) QueryAttributesReport() *AttributeReportQuery {
+	query := (&AttributeReportClient{config: sq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := sq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := sq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(statement.Table, statement.FieldID, selector),
+			sqlgraph.To(attributereport.Table, attributereport.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, statement.AttributesReportTable, statement.AttributesReportColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(sq.driver.Dialect(), step)
 		return fromU, nil
@@ -328,6 +352,7 @@ func (sq *StatementQuery) Clone() *StatementQuery {
 		predicates:                 append([]predicate.Statement{}, sq.predicates...),
 		withSubjects:               sq.withSubjects.Clone(),
 		withAttestationCollections: sq.withAttestationCollections.Clone(),
+		withAttributesReport:       sq.withAttributesReport.Clone(),
 		withDsse:                   sq.withDsse.Clone(),
 		// clone intermediate query.
 		sql:  sq.sql.Clone(),
@@ -354,6 +379,17 @@ func (sq *StatementQuery) WithAttestationCollections(opts ...func(*AttestationCo
 		opt(query)
 	}
 	sq.withAttestationCollections = query
+	return sq
+}
+
+// WithAttributesReport tells the query-builder to eager-load the nodes that are connected to
+// the "attributes_report" edge. The optional arguments are used to configure the query builder of the edge.
+func (sq *StatementQuery) WithAttributesReport(opts ...func(*AttributeReportQuery)) *StatementQuery {
+	query := (&AttributeReportClient{config: sq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	sq.withAttributesReport = query
 	return sq
 }
 
@@ -446,9 +482,10 @@ func (sq *StatementQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*St
 	var (
 		nodes       = []*Statement{}
 		_spec       = sq.querySpec()
-		loadedTypes = [3]bool{
+		loadedTypes = [4]bool{
 			sq.withSubjects != nil,
 			sq.withAttestationCollections != nil,
+			sq.withAttributesReport != nil,
 			sq.withDsse != nil,
 		}
 	)
@@ -483,6 +520,12 @@ func (sq *StatementQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*St
 	if query := sq.withAttestationCollections; query != nil {
 		if err := sq.loadAttestationCollections(ctx, query, nodes, nil,
 			func(n *Statement, e *AttestationCollection) { n.Edges.AttestationCollections = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := sq.withAttributesReport; query != nil {
+		if err := sq.loadAttributesReport(ctx, query, nodes, nil,
+			func(n *Statement, e *AttributeReport) { n.Edges.AttributesReport = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -569,6 +612,34 @@ func (sq *StatementQuery) loadAttestationCollections(ctx context.Context, query 
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "statement_attestation_collections" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (sq *StatementQuery) loadAttributesReport(ctx context.Context, query *AttributeReportQuery, nodes []*Statement, init func(*Statement), assign func(*Statement, *AttributeReport)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[int]*Statement)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+	}
+	query.withFKs = true
+	query.Where(predicate.AttributeReport(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(statement.AttributesReportColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.statement_attributes_report
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "statement_attributes_report" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "statement_attributes_report" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

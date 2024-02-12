@@ -16,6 +16,10 @@ type Tx struct {
 	Attestation *AttestationClient
 	// AttestationCollection is the client for interacting with the AttestationCollection builders.
 	AttestationCollection *AttestationCollectionClient
+	// AttributeAssertion is the client for interacting with the AttributeAssertion builders.
+	AttributeAssertion *AttributeAssertionClient
+	// AttributeReport is the client for interacting with the AttributeReport builders.
+	AttributeReport *AttributeReportClient
 	// Dsse is the client for interacting with the Dsse builders.
 	Dsse *DsseClient
 	// PayloadDigest is the client for interacting with the PayloadDigest builders.
@@ -163,6 +167,8 @@ func (tx *Tx) Client() *Client {
 func (tx *Tx) init() {
 	tx.Attestation = NewAttestationClient(tx.config)
 	tx.AttestationCollection = NewAttestationCollectionClient(tx.config)
+	tx.AttributeAssertion = NewAttributeAssertionClient(tx.config)
+	tx.AttributeReport = NewAttributeReportClient(tx.config)
 	tx.Dsse = NewDsseClient(tx.config)
 	tx.PayloadDigest = NewPayloadDigestClient(tx.config)
 	tx.Signature = NewSignatureClient(tx.config)

@@ -18,6 +18,8 @@ const (
 	EdgeSubjects = "subjects"
 	// EdgeAttestationCollections holds the string denoting the attestation_collections edge name in mutations.
 	EdgeAttestationCollections = "attestation_collections"
+	// EdgeAttributesReport holds the string denoting the attributes_report edge name in mutations.
+	EdgeAttributesReport = "attributes_report"
 	// EdgeDsse holds the string denoting the dsse edge name in mutations.
 	EdgeDsse = "dsse"
 	// Table holds the table name of the statement in the database.
@@ -36,6 +38,13 @@ const (
 	AttestationCollectionsInverseTable = "attestation_collections"
 	// AttestationCollectionsColumn is the table column denoting the attestation_collections relation/edge.
 	AttestationCollectionsColumn = "statement_attestation_collections"
+	// AttributesReportTable is the table that holds the attributes_report relation/edge.
+	AttributesReportTable = "attribute_reports"
+	// AttributesReportInverseTable is the table name for the AttributeReport entity.
+	// It exists in this package in order to avoid circular dependency with the "attributereport" package.
+	AttributesReportInverseTable = "attribute_reports"
+	// AttributesReportColumn is the table column denoting the attributes_report relation/edge.
+	AttributesReportColumn = "statement_attributes_report"
 	// DsseTable is the table that holds the dsse relation/edge.
 	DsseTable = "dsses"
 	// DsseInverseTable is the table name for the Dsse entity.
@@ -100,6 +109,13 @@ func ByAttestationCollectionsField(field string, opts ...sql.OrderTermOption) Or
 	}
 }
 
+// ByAttributesReportField orders the results by attributes_report field.
+func ByAttributesReportField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAttributesReportStep(), sql.OrderByField(field, opts...))
+	}
+}
+
 // ByDsseCount orders the results by dsse count.
 func ByDsseCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -125,6 +141,13 @@ func newAttestationCollectionsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(AttestationCollectionsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2O, false, AttestationCollectionsTable, AttestationCollectionsColumn),
+	)
+}
+func newAttributesReportStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(AttributesReportInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2O, false, AttributesReportTable, AttributesReportColumn),
 	)
 }
 func newDsseStep() *sqlgraph.Step {

@@ -10,6 +10,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/in-toto/archivista/ent/attestationcollection"
+	"github.com/in-toto/archivista/ent/attributereport"
 	"github.com/in-toto/archivista/ent/dsse"
 	"github.com/in-toto/archivista/ent/statement"
 	"github.com/in-toto/archivista/ent/subject"
@@ -60,6 +61,25 @@ func (sc *StatementCreate) SetNillableAttestationCollectionsID(id *int) *Stateme
 // SetAttestationCollections sets the "attestation_collections" edge to the AttestationCollection entity.
 func (sc *StatementCreate) SetAttestationCollections(a *AttestationCollection) *StatementCreate {
 	return sc.SetAttestationCollectionsID(a.ID)
+}
+
+// SetAttributesReportID sets the "attributes_report" edge to the AttributeReport entity by ID.
+func (sc *StatementCreate) SetAttributesReportID(id int) *StatementCreate {
+	sc.mutation.SetAttributesReportID(id)
+	return sc
+}
+
+// SetNillableAttributesReportID sets the "attributes_report" edge to the AttributeReport entity by ID if the given value is not nil.
+func (sc *StatementCreate) SetNillableAttributesReportID(id *int) *StatementCreate {
+	if id != nil {
+		sc = sc.SetAttributesReportID(*id)
+	}
+	return sc
+}
+
+// SetAttributesReport sets the "attributes_report" edge to the AttributeReport entity.
+func (sc *StatementCreate) SetAttributesReport(a *AttributeReport) *StatementCreate {
+	return sc.SetAttributesReportID(a.ID)
 }
 
 // AddDsseIDs adds the "dsse" edge to the Dsse entity by IDs.
@@ -174,6 +194,22 @@ func (sc *StatementCreate) createSpec() (*Statement, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(attestationcollection.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := sc.mutation.AttributesReportIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   statement.AttributesReportTable,
+			Columns: []string{statement.AttributesReportColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(attributereport.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

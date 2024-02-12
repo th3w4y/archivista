@@ -33,6 +33,30 @@ func (f AttestationCollectionFunc) Mutate(ctx context.Context, m ent.Mutation) (
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AttestationCollectionMutation", m)
 }
 
+// The AttributeAssertionFunc type is an adapter to allow the use of ordinary
+// function as AttributeAssertion mutator.
+type AttributeAssertionFunc func(context.Context, *ent.AttributeAssertionMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f AttributeAssertionFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.AttributeAssertionMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AttributeAssertionMutation", m)
+}
+
+// The AttributeReportFunc type is an adapter to allow the use of ordinary
+// function as AttributeReport mutator.
+type AttributeReportFunc func(context.Context, *ent.AttributeReportMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f AttributeReportFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.AttributeReportMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AttributeReportMutation", m)
+}
+
 // The DsseFunc type is an adapter to allow the use of ordinary
 // function as Dsse mutator.
 type DsseFunc func(context.Context, *ent.DsseMutation) (ent.Value, error)

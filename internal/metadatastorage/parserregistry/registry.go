@@ -17,11 +17,14 @@ package parserregistry
 import (
 	"github.com/in-toto/archivista/internal/metadatastorage"
 	"github.com/in-toto/archivista/internal/metadatastorage/attestationcollection"
+	"github.com/in-toto/archivista/internal/metadatastorage/scaireport"
 )
 
 var (
 	parsersByPredicate = map[string]metadatastorage.ParserFunc{
 		attestationcollection.Predicate: attestationcollection.Parse,
+		scaireport.Predicate: scaireport.Parse,
+		
 	}
 )
 

@@ -62,6 +62,48 @@ var (
 			},
 		},
 	}
+	// AttributeAssertionsColumns holds the columns for the "attribute_assertions" table.
+	AttributeAssertionsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "attribute", Type: field.TypeString, Unique: true},
+		{Name: "target", Type: field.TypeJSON, Nullable: true},
+		{Name: "conditions", Type: field.TypeJSON, Nullable: true},
+		{Name: "evidence", Type: field.TypeJSON, Nullable: true},
+		{Name: "attribute_report_attributes", Type: field.TypeInt},
+	}
+	// AttributeAssertionsTable holds the schema information for the "attribute_assertions" table.
+	AttributeAssertionsTable = &schema.Table{
+		Name:       "attribute_assertions",
+		Columns:    AttributeAssertionsColumns,
+		PrimaryKey: []*schema.Column{AttributeAssertionsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "attribute_assertions_attribute_reports_attributes",
+				Columns:    []*schema.Column{AttributeAssertionsColumns[5]},
+				RefColumns: []*schema.Column{AttributeReportsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+	}
+	// AttributeReportsColumns holds the columns for the "attribute_reports" table.
+	AttributeReportsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "statement_attributes_report", Type: field.TypeInt, Unique: true},
+	}
+	// AttributeReportsTable holds the schema information for the "attribute_reports" table.
+	AttributeReportsTable = &schema.Table{
+		Name:       "attribute_reports",
+		Columns:    AttributeReportsColumns,
+		PrimaryKey: []*schema.Column{AttributeReportsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "attribute_reports_statements_attributes_report",
+				Columns:    []*schema.Column{AttributeReportsColumns[1]},
+				RefColumns: []*schema.Column{StatementsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+	}
 	// DssesColumns holds the columns for the "dsses" table.
 	DssesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -237,6 +279,8 @@ var (
 	Tables = []*schema.Table{
 		AttestationsTable,
 		AttestationCollectionsTable,
+		AttributeAssertionsTable,
+		AttributeReportsTable,
 		DssesTable,
 		PayloadDigestsTable,
 		SignaturesTable,
@@ -250,6 +294,8 @@ var (
 func init() {
 	AttestationsTable.ForeignKeys[0].RefTable = AttestationCollectionsTable
 	AttestationCollectionsTable.ForeignKeys[0].RefTable = StatementsTable
+	AttributeAssertionsTable.ForeignKeys[0].RefTable = AttributeReportsTable
+	AttributeReportsTable.ForeignKeys[0].RefTable = StatementsTable
 	DssesTable.ForeignKeys[0].RefTable = StatementsTable
 	PayloadDigestsTable.ForeignKeys[0].RefTable = DssesTable
 	SignaturesTable.ForeignKeys[0].RefTable = DssesTable

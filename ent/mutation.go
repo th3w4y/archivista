@@ -13,6 +13,8 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"github.com/in-toto/archivista/ent/attestation"
 	"github.com/in-toto/archivista/ent/attestationcollection"
+	"github.com/in-toto/archivista/ent/attributeassertion"
+	"github.com/in-toto/archivista/ent/attributereport"
 	"github.com/in-toto/archivista/ent/dsse"
 	"github.com/in-toto/archivista/ent/payloaddigest"
 	"github.com/in-toto/archivista/ent/predicate"
@@ -34,6 +36,8 @@ const (
 	// Node types.
 	TypeAttestation           = "Attestation"
 	TypeAttestationCollection = "AttestationCollection"
+	TypeAttributeAssertion    = "AttributeAssertion"
+	TypeAttributeReport       = "AttributeReport"
 	TypeDsse                  = "Dsse"
 	TypePayloadDigest         = "PayloadDigest"
 	TypeSignature             = "Signature"
@@ -912,6 +916,1037 @@ func (m *AttestationCollectionMutation) ResetEdge(name string) error {
 		return nil
 	}
 	return fmt.Errorf("unknown AttestationCollection edge %s", name)
+}
+
+// AttributeAssertionMutation represents an operation that mutates the AttributeAssertion nodes in the graph.
+type AttributeAssertionMutation struct {
+	config
+	op                       Op
+	typ                      string
+	id                       *int
+	attribute                *string
+	target                   *map[string]interface{}
+	conditions               *map[string]interface{}
+	evidence                 *map[string]interface{}
+	clearedFields            map[string]struct{}
+	attributes_report        *int
+	clearedattributes_report bool
+	done                     bool
+	oldValue                 func(context.Context) (*AttributeAssertion, error)
+	predicates               []predicate.AttributeAssertion
+}
+
+var _ ent.Mutation = (*AttributeAssertionMutation)(nil)
+
+// attributeassertionOption allows management of the mutation configuration using functional options.
+type attributeassertionOption func(*AttributeAssertionMutation)
+
+// newAttributeAssertionMutation creates new mutation for the AttributeAssertion entity.
+func newAttributeAssertionMutation(c config, op Op, opts ...attributeassertionOption) *AttributeAssertionMutation {
+	m := &AttributeAssertionMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeAttributeAssertion,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withAttributeAssertionID sets the ID field of the mutation.
+func withAttributeAssertionID(id int) attributeassertionOption {
+	return func(m *AttributeAssertionMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *AttributeAssertion
+		)
+		m.oldValue = func(ctx context.Context) (*AttributeAssertion, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().AttributeAssertion.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withAttributeAssertion sets the old AttributeAssertion of the mutation.
+func withAttributeAssertion(node *AttributeAssertion) attributeassertionOption {
+	return func(m *AttributeAssertionMutation) {
+		m.oldValue = func(context.Context) (*AttributeAssertion, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m AttributeAssertionMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m AttributeAssertionMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *AttributeAssertionMutation) ID() (id int, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *AttributeAssertionMutation) IDs(ctx context.Context) ([]int, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().AttributeAssertion.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetAttribute sets the "attribute" field.
+func (m *AttributeAssertionMutation) SetAttribute(s string) {
+	m.attribute = &s
+}
+
+// Attribute returns the value of the "attribute" field in the mutation.
+func (m *AttributeAssertionMutation) Attribute() (r string, exists bool) {
+	v := m.attribute
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAttribute returns the old "attribute" field's value of the AttributeAssertion entity.
+// If the AttributeAssertion object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AttributeAssertionMutation) OldAttribute(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAttribute is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAttribute requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAttribute: %w", err)
+	}
+	return oldValue.Attribute, nil
+}
+
+// ResetAttribute resets all changes to the "attribute" field.
+func (m *AttributeAssertionMutation) ResetAttribute() {
+	m.attribute = nil
+}
+
+// SetTarget sets the "target" field.
+func (m *AttributeAssertionMutation) SetTarget(value map[string]interface{}) {
+	m.target = &value
+}
+
+// Target returns the value of the "target" field in the mutation.
+func (m *AttributeAssertionMutation) Target() (r map[string]interface{}, exists bool) {
+	v := m.target
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTarget returns the old "target" field's value of the AttributeAssertion entity.
+// If the AttributeAssertion object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AttributeAssertionMutation) OldTarget(ctx context.Context) (v map[string]interface{}, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTarget is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTarget requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTarget: %w", err)
+	}
+	return oldValue.Target, nil
+}
+
+// ClearTarget clears the value of the "target" field.
+func (m *AttributeAssertionMutation) ClearTarget() {
+	m.target = nil
+	m.clearedFields[attributeassertion.FieldTarget] = struct{}{}
+}
+
+// TargetCleared returns if the "target" field was cleared in this mutation.
+func (m *AttributeAssertionMutation) TargetCleared() bool {
+	_, ok := m.clearedFields[attributeassertion.FieldTarget]
+	return ok
+}
+
+// ResetTarget resets all changes to the "target" field.
+func (m *AttributeAssertionMutation) ResetTarget() {
+	m.target = nil
+	delete(m.clearedFields, attributeassertion.FieldTarget)
+}
+
+// SetConditions sets the "conditions" field.
+func (m *AttributeAssertionMutation) SetConditions(value map[string]interface{}) {
+	m.conditions = &value
+}
+
+// Conditions returns the value of the "conditions" field in the mutation.
+func (m *AttributeAssertionMutation) Conditions() (r map[string]interface{}, exists bool) {
+	v := m.conditions
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldConditions returns the old "conditions" field's value of the AttributeAssertion entity.
+// If the AttributeAssertion object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AttributeAssertionMutation) OldConditions(ctx context.Context) (v map[string]interface{}, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldConditions is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldConditions requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldConditions: %w", err)
+	}
+	return oldValue.Conditions, nil
+}
+
+// ClearConditions clears the value of the "conditions" field.
+func (m *AttributeAssertionMutation) ClearConditions() {
+	m.conditions = nil
+	m.clearedFields[attributeassertion.FieldConditions] = struct{}{}
+}
+
+// ConditionsCleared returns if the "conditions" field was cleared in this mutation.
+func (m *AttributeAssertionMutation) ConditionsCleared() bool {
+	_, ok := m.clearedFields[attributeassertion.FieldConditions]
+	return ok
+}
+
+// ResetConditions resets all changes to the "conditions" field.
+func (m *AttributeAssertionMutation) ResetConditions() {
+	m.conditions = nil
+	delete(m.clearedFields, attributeassertion.FieldConditions)
+}
+
+// SetEvidence sets the "evidence" field.
+func (m *AttributeAssertionMutation) SetEvidence(value map[string]interface{}) {
+	m.evidence = &value
+}
+
+// Evidence returns the value of the "evidence" field in the mutation.
+func (m *AttributeAssertionMutation) Evidence() (r map[string]interface{}, exists bool) {
+	v := m.evidence
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEvidence returns the old "evidence" field's value of the AttributeAssertion entity.
+// If the AttributeAssertion object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AttributeAssertionMutation) OldEvidence(ctx context.Context) (v map[string]interface{}, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEvidence is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEvidence requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEvidence: %w", err)
+	}
+	return oldValue.Evidence, nil
+}
+
+// ClearEvidence clears the value of the "evidence" field.
+func (m *AttributeAssertionMutation) ClearEvidence() {
+	m.evidence = nil
+	m.clearedFields[attributeassertion.FieldEvidence] = struct{}{}
+}
+
+// EvidenceCleared returns if the "evidence" field was cleared in this mutation.
+func (m *AttributeAssertionMutation) EvidenceCleared() bool {
+	_, ok := m.clearedFields[attributeassertion.FieldEvidence]
+	return ok
+}
+
+// ResetEvidence resets all changes to the "evidence" field.
+func (m *AttributeAssertionMutation) ResetEvidence() {
+	m.evidence = nil
+	delete(m.clearedFields, attributeassertion.FieldEvidence)
+}
+
+// SetAttributesReportID sets the "attributes_report" edge to the AttributeReport entity by id.
+func (m *AttributeAssertionMutation) SetAttributesReportID(id int) {
+	m.attributes_report = &id
+}
+
+// ClearAttributesReport clears the "attributes_report" edge to the AttributeReport entity.
+func (m *AttributeAssertionMutation) ClearAttributesReport() {
+	m.clearedattributes_report = true
+}
+
+// AttributesReportCleared reports if the "attributes_report" edge to the AttributeReport entity was cleared.
+func (m *AttributeAssertionMutation) AttributesReportCleared() bool {
+	return m.clearedattributes_report
+}
+
+// AttributesReportID returns the "attributes_report" edge ID in the mutation.
+func (m *AttributeAssertionMutation) AttributesReportID() (id int, exists bool) {
+	if m.attributes_report != nil {
+		return *m.attributes_report, true
+	}
+	return
+}
+
+// AttributesReportIDs returns the "attributes_report" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// AttributesReportID instead. It exists only for internal usage by the builders.
+func (m *AttributeAssertionMutation) AttributesReportIDs() (ids []int) {
+	if id := m.attributes_report; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetAttributesReport resets all changes to the "attributes_report" edge.
+func (m *AttributeAssertionMutation) ResetAttributesReport() {
+	m.attributes_report = nil
+	m.clearedattributes_report = false
+}
+
+// Where appends a list predicates to the AttributeAssertionMutation builder.
+func (m *AttributeAssertionMutation) Where(ps ...predicate.AttributeAssertion) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the AttributeAssertionMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *AttributeAssertionMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.AttributeAssertion, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *AttributeAssertionMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *AttributeAssertionMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (AttributeAssertion).
+func (m *AttributeAssertionMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *AttributeAssertionMutation) Fields() []string {
+	fields := make([]string, 0, 4)
+	if m.attribute != nil {
+		fields = append(fields, attributeassertion.FieldAttribute)
+	}
+	if m.target != nil {
+		fields = append(fields, attributeassertion.FieldTarget)
+	}
+	if m.conditions != nil {
+		fields = append(fields, attributeassertion.FieldConditions)
+	}
+	if m.evidence != nil {
+		fields = append(fields, attributeassertion.FieldEvidence)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *AttributeAssertionMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case attributeassertion.FieldAttribute:
+		return m.Attribute()
+	case attributeassertion.FieldTarget:
+		return m.Target()
+	case attributeassertion.FieldConditions:
+		return m.Conditions()
+	case attributeassertion.FieldEvidence:
+		return m.Evidence()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *AttributeAssertionMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case attributeassertion.FieldAttribute:
+		return m.OldAttribute(ctx)
+	case attributeassertion.FieldTarget:
+		return m.OldTarget(ctx)
+	case attributeassertion.FieldConditions:
+		return m.OldConditions(ctx)
+	case attributeassertion.FieldEvidence:
+		return m.OldEvidence(ctx)
+	}
+	return nil, fmt.Errorf("unknown AttributeAssertion field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *AttributeAssertionMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case attributeassertion.FieldAttribute:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAttribute(v)
+		return nil
+	case attributeassertion.FieldTarget:
+		v, ok := value.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTarget(v)
+		return nil
+	case attributeassertion.FieldConditions:
+		v, ok := value.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetConditions(v)
+		return nil
+	case attributeassertion.FieldEvidence:
+		v, ok := value.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEvidence(v)
+		return nil
+	}
+	return fmt.Errorf("unknown AttributeAssertion field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *AttributeAssertionMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *AttributeAssertionMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *AttributeAssertionMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown AttributeAssertion numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *AttributeAssertionMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(attributeassertion.FieldTarget) {
+		fields = append(fields, attributeassertion.FieldTarget)
+	}
+	if m.FieldCleared(attributeassertion.FieldConditions) {
+		fields = append(fields, attributeassertion.FieldConditions)
+	}
+	if m.FieldCleared(attributeassertion.FieldEvidence) {
+		fields = append(fields, attributeassertion.FieldEvidence)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *AttributeAssertionMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *AttributeAssertionMutation) ClearField(name string) error {
+	switch name {
+	case attributeassertion.FieldTarget:
+		m.ClearTarget()
+		return nil
+	case attributeassertion.FieldConditions:
+		m.ClearConditions()
+		return nil
+	case attributeassertion.FieldEvidence:
+		m.ClearEvidence()
+		return nil
+	}
+	return fmt.Errorf("unknown AttributeAssertion nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *AttributeAssertionMutation) ResetField(name string) error {
+	switch name {
+	case attributeassertion.FieldAttribute:
+		m.ResetAttribute()
+		return nil
+	case attributeassertion.FieldTarget:
+		m.ResetTarget()
+		return nil
+	case attributeassertion.FieldConditions:
+		m.ResetConditions()
+		return nil
+	case attributeassertion.FieldEvidence:
+		m.ResetEvidence()
+		return nil
+	}
+	return fmt.Errorf("unknown AttributeAssertion field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *AttributeAssertionMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.attributes_report != nil {
+		edges = append(edges, attributeassertion.EdgeAttributesReport)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *AttributeAssertionMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case attributeassertion.EdgeAttributesReport:
+		if id := m.attributes_report; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *AttributeAssertionMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *AttributeAssertionMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *AttributeAssertionMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.clearedattributes_report {
+		edges = append(edges, attributeassertion.EdgeAttributesReport)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *AttributeAssertionMutation) EdgeCleared(name string) bool {
+	switch name {
+	case attributeassertion.EdgeAttributesReport:
+		return m.clearedattributes_report
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *AttributeAssertionMutation) ClearEdge(name string) error {
+	switch name {
+	case attributeassertion.EdgeAttributesReport:
+		m.ClearAttributesReport()
+		return nil
+	}
+	return fmt.Errorf("unknown AttributeAssertion unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *AttributeAssertionMutation) ResetEdge(name string) error {
+	switch name {
+	case attributeassertion.EdgeAttributesReport:
+		m.ResetAttributesReport()
+		return nil
+	}
+	return fmt.Errorf("unknown AttributeAssertion edge %s", name)
+}
+
+// AttributeReportMutation represents an operation that mutates the AttributeReport nodes in the graph.
+type AttributeReportMutation struct {
+	config
+	op                Op
+	typ               string
+	id                *int
+	clearedFields     map[string]struct{}
+	attributes        map[int]struct{}
+	removedattributes map[int]struct{}
+	clearedattributes bool
+	statement         *int
+	clearedstatement  bool
+	done              bool
+	oldValue          func(context.Context) (*AttributeReport, error)
+	predicates        []predicate.AttributeReport
+}
+
+var _ ent.Mutation = (*AttributeReportMutation)(nil)
+
+// attributereportOption allows management of the mutation configuration using functional options.
+type attributereportOption func(*AttributeReportMutation)
+
+// newAttributeReportMutation creates new mutation for the AttributeReport entity.
+func newAttributeReportMutation(c config, op Op, opts ...attributereportOption) *AttributeReportMutation {
+	m := &AttributeReportMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeAttributeReport,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withAttributeReportID sets the ID field of the mutation.
+func withAttributeReportID(id int) attributereportOption {
+	return func(m *AttributeReportMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *AttributeReport
+		)
+		m.oldValue = func(ctx context.Context) (*AttributeReport, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().AttributeReport.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withAttributeReport sets the old AttributeReport of the mutation.
+func withAttributeReport(node *AttributeReport) attributereportOption {
+	return func(m *AttributeReportMutation) {
+		m.oldValue = func(context.Context) (*AttributeReport, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m AttributeReportMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m AttributeReportMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *AttributeReportMutation) ID() (id int, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *AttributeReportMutation) IDs(ctx context.Context) ([]int, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().AttributeReport.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// AddAttributeIDs adds the "attributes" edge to the AttributeAssertion entity by ids.
+func (m *AttributeReportMutation) AddAttributeIDs(ids ...int) {
+	if m.attributes == nil {
+		m.attributes = make(map[int]struct{})
+	}
+	for i := range ids {
+		m.attributes[ids[i]] = struct{}{}
+	}
+}
+
+// ClearAttributes clears the "attributes" edge to the AttributeAssertion entity.
+func (m *AttributeReportMutation) ClearAttributes() {
+	m.clearedattributes = true
+}
+
+// AttributesCleared reports if the "attributes" edge to the AttributeAssertion entity was cleared.
+func (m *AttributeReportMutation) AttributesCleared() bool {
+	return m.clearedattributes
+}
+
+// RemoveAttributeIDs removes the "attributes" edge to the AttributeAssertion entity by IDs.
+func (m *AttributeReportMutation) RemoveAttributeIDs(ids ...int) {
+	if m.removedattributes == nil {
+		m.removedattributes = make(map[int]struct{})
+	}
+	for i := range ids {
+		delete(m.attributes, ids[i])
+		m.removedattributes[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedAttributes returns the removed IDs of the "attributes" edge to the AttributeAssertion entity.
+func (m *AttributeReportMutation) RemovedAttributesIDs() (ids []int) {
+	for id := range m.removedattributes {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// AttributesIDs returns the "attributes" edge IDs in the mutation.
+func (m *AttributeReportMutation) AttributesIDs() (ids []int) {
+	for id := range m.attributes {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetAttributes resets all changes to the "attributes" edge.
+func (m *AttributeReportMutation) ResetAttributes() {
+	m.attributes = nil
+	m.clearedattributes = false
+	m.removedattributes = nil
+}
+
+// SetStatementID sets the "statement" edge to the Statement entity by id.
+func (m *AttributeReportMutation) SetStatementID(id int) {
+	m.statement = &id
+}
+
+// ClearStatement clears the "statement" edge to the Statement entity.
+func (m *AttributeReportMutation) ClearStatement() {
+	m.clearedstatement = true
+}
+
+// StatementCleared reports if the "statement" edge to the Statement entity was cleared.
+func (m *AttributeReportMutation) StatementCleared() bool {
+	return m.clearedstatement
+}
+
+// StatementID returns the "statement" edge ID in the mutation.
+func (m *AttributeReportMutation) StatementID() (id int, exists bool) {
+	if m.statement != nil {
+		return *m.statement, true
+	}
+	return
+}
+
+// StatementIDs returns the "statement" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// StatementID instead. It exists only for internal usage by the builders.
+func (m *AttributeReportMutation) StatementIDs() (ids []int) {
+	if id := m.statement; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetStatement resets all changes to the "statement" edge.
+func (m *AttributeReportMutation) ResetStatement() {
+	m.statement = nil
+	m.clearedstatement = false
+}
+
+// Where appends a list predicates to the AttributeReportMutation builder.
+func (m *AttributeReportMutation) Where(ps ...predicate.AttributeReport) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the AttributeReportMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *AttributeReportMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.AttributeReport, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *AttributeReportMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *AttributeReportMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (AttributeReport).
+func (m *AttributeReportMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *AttributeReportMutation) Fields() []string {
+	fields := make([]string, 0, 0)
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *AttributeReportMutation) Field(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *AttributeReportMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	return nil, fmt.Errorf("unknown AttributeReport field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *AttributeReportMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown AttributeReport field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *AttributeReportMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *AttributeReportMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *AttributeReportMutation) AddField(name string, value ent.Value) error {
+	return fmt.Errorf("unknown AttributeReport numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *AttributeReportMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *AttributeReportMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *AttributeReportMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown AttributeReport nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *AttributeReportMutation) ResetField(name string) error {
+	return fmt.Errorf("unknown AttributeReport field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *AttributeReportMutation) AddedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.attributes != nil {
+		edges = append(edges, attributereport.EdgeAttributes)
+	}
+	if m.statement != nil {
+		edges = append(edges, attributereport.EdgeStatement)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *AttributeReportMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case attributereport.EdgeAttributes:
+		ids := make([]ent.Value, 0, len(m.attributes))
+		for id := range m.attributes {
+			ids = append(ids, id)
+		}
+		return ids
+	case attributereport.EdgeStatement:
+		if id := m.statement; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *AttributeReportMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.removedattributes != nil {
+		edges = append(edges, attributereport.EdgeAttributes)
+	}
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *AttributeReportMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case attributereport.EdgeAttributes:
+		ids := make([]ent.Value, 0, len(m.removedattributes))
+		for id := range m.removedattributes {
+			ids = append(ids, id)
+		}
+		return ids
+	}
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *AttributeReportMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.clearedattributes {
+		edges = append(edges, attributereport.EdgeAttributes)
+	}
+	if m.clearedstatement {
+		edges = append(edges, attributereport.EdgeStatement)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *AttributeReportMutation) EdgeCleared(name string) bool {
+	switch name {
+	case attributereport.EdgeAttributes:
+		return m.clearedattributes
+	case attributereport.EdgeStatement:
+		return m.clearedstatement
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *AttributeReportMutation) ClearEdge(name string) error {
+	switch name {
+	case attributereport.EdgeStatement:
+		m.ClearStatement()
+		return nil
+	}
+	return fmt.Errorf("unknown AttributeReport unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *AttributeReportMutation) ResetEdge(name string) error {
+	switch name {
+	case attributereport.EdgeAttributes:
+		m.ResetAttributes()
+		return nil
+	case attributereport.EdgeStatement:
+		m.ResetStatement()
+		return nil
+	}
+	return fmt.Errorf("unknown AttributeReport edge %s", name)
 }
 
 // DsseMutation represents an operation that mutates the Dsse nodes in the graph.
@@ -2521,6 +3556,8 @@ type StatementMutation struct {
 	clearedsubjects                bool
 	attestation_collections        *int
 	clearedattestation_collections bool
+	attributes_report              *int
+	clearedattributes_report       bool
 	dsse                           map[int]struct{}
 	removeddsse                    map[int]struct{}
 	cleareddsse                    bool
@@ -2756,6 +3793,45 @@ func (m *StatementMutation) ResetAttestationCollections() {
 	m.clearedattestation_collections = false
 }
 
+// SetAttributesReportID sets the "attributes_report" edge to the AttributeReport entity by id.
+func (m *StatementMutation) SetAttributesReportID(id int) {
+	m.attributes_report = &id
+}
+
+// ClearAttributesReport clears the "attributes_report" edge to the AttributeReport entity.
+func (m *StatementMutation) ClearAttributesReport() {
+	m.clearedattributes_report = true
+}
+
+// AttributesReportCleared reports if the "attributes_report" edge to the AttributeReport entity was cleared.
+func (m *StatementMutation) AttributesReportCleared() bool {
+	return m.clearedattributes_report
+}
+
+// AttributesReportID returns the "attributes_report" edge ID in the mutation.
+func (m *StatementMutation) AttributesReportID() (id int, exists bool) {
+	if m.attributes_report != nil {
+		return *m.attributes_report, true
+	}
+	return
+}
+
+// AttributesReportIDs returns the "attributes_report" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// AttributesReportID instead. It exists only for internal usage by the builders.
+func (m *StatementMutation) AttributesReportIDs() (ids []int) {
+	if id := m.attributes_report; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetAttributesReport resets all changes to the "attributes_report" edge.
+func (m *StatementMutation) ResetAttributesReport() {
+	m.attributes_report = nil
+	m.clearedattributes_report = false
+}
+
 // AddDsseIDs adds the "dsse" edge to the Dsse entity by ids.
 func (m *StatementMutation) AddDsseIDs(ids ...int) {
 	if m.dsse == nil {
@@ -2943,12 +4019,15 @@ func (m *StatementMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *StatementMutation) AddedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m.subjects != nil {
 		edges = append(edges, statement.EdgeSubjects)
 	}
 	if m.attestation_collections != nil {
 		edges = append(edges, statement.EdgeAttestationCollections)
+	}
+	if m.attributes_report != nil {
+		edges = append(edges, statement.EdgeAttributesReport)
 	}
 	if m.dsse != nil {
 		edges = append(edges, statement.EdgeDsse)
@@ -2970,6 +4049,10 @@ func (m *StatementMutation) AddedIDs(name string) []ent.Value {
 		if id := m.attestation_collections; id != nil {
 			return []ent.Value{*id}
 		}
+	case statement.EdgeAttributesReport:
+		if id := m.attributes_report; id != nil {
+			return []ent.Value{*id}
+		}
 	case statement.EdgeDsse:
 		ids := make([]ent.Value, 0, len(m.dsse))
 		for id := range m.dsse {
@@ -2982,7 +4065,7 @@ func (m *StatementMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *StatementMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m.removedsubjects != nil {
 		edges = append(edges, statement.EdgeSubjects)
 	}
@@ -3014,12 +4097,15 @@ func (m *StatementMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *StatementMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m.clearedsubjects {
 		edges = append(edges, statement.EdgeSubjects)
 	}
 	if m.clearedattestation_collections {
 		edges = append(edges, statement.EdgeAttestationCollections)
+	}
+	if m.clearedattributes_report {
+		edges = append(edges, statement.EdgeAttributesReport)
 	}
 	if m.cleareddsse {
 		edges = append(edges, statement.EdgeDsse)
@@ -3035,6 +4121,8 @@ func (m *StatementMutation) EdgeCleared(name string) bool {
 		return m.clearedsubjects
 	case statement.EdgeAttestationCollections:
 		return m.clearedattestation_collections
+	case statement.EdgeAttributesReport:
+		return m.clearedattributes_report
 	case statement.EdgeDsse:
 		return m.cleareddsse
 	}
@@ -3047,6 +4135,9 @@ func (m *StatementMutation) ClearEdge(name string) error {
 	switch name {
 	case statement.EdgeAttestationCollections:
 		m.ClearAttestationCollections()
+		return nil
+	case statement.EdgeAttributesReport:
+		m.ClearAttributesReport()
 		return nil
 	}
 	return fmt.Errorf("unknown Statement unique edge %s", name)
@@ -3061,6 +4152,9 @@ func (m *StatementMutation) ResetEdge(name string) error {
 		return nil
 	case statement.EdgeAttestationCollections:
 		m.ResetAttestationCollections()
+		return nil
+	case statement.EdgeAttributesReport:
+		m.ResetAttributesReport()
 		return nil
 	case statement.EdgeDsse:
 		m.ResetDsse()

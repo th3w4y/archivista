@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/in-toto/archivista/ent/attestationcollection"
+	"github.com/in-toto/archivista/ent/attributereport"
 	"github.com/in-toto/archivista/ent/dsse"
 	"github.com/in-toto/archivista/ent/predicate"
 	"github.com/in-toto/archivista/ent/statement"
@@ -78,6 +79,25 @@ func (su *StatementUpdate) SetAttestationCollections(a *AttestationCollection) *
 	return su.SetAttestationCollectionsID(a.ID)
 }
 
+// SetAttributesReportID sets the "attributes_report" edge to the AttributeReport entity by ID.
+func (su *StatementUpdate) SetAttributesReportID(id int) *StatementUpdate {
+	su.mutation.SetAttributesReportID(id)
+	return su
+}
+
+// SetNillableAttributesReportID sets the "attributes_report" edge to the AttributeReport entity by ID if the given value is not nil.
+func (su *StatementUpdate) SetNillableAttributesReportID(id *int) *StatementUpdate {
+	if id != nil {
+		su = su.SetAttributesReportID(*id)
+	}
+	return su
+}
+
+// SetAttributesReport sets the "attributes_report" edge to the AttributeReport entity.
+func (su *StatementUpdate) SetAttributesReport(a *AttributeReport) *StatementUpdate {
+	return su.SetAttributesReportID(a.ID)
+}
+
 // AddDsseIDs adds the "dsse" edge to the Dsse entity by IDs.
 func (su *StatementUpdate) AddDsseIDs(ids ...int) *StatementUpdate {
 	su.mutation.AddDsseIDs(ids...)
@@ -122,6 +142,12 @@ func (su *StatementUpdate) RemoveSubjects(s ...*Subject) *StatementUpdate {
 // ClearAttestationCollections clears the "attestation_collections" edge to the AttestationCollection entity.
 func (su *StatementUpdate) ClearAttestationCollections() *StatementUpdate {
 	su.mutation.ClearAttestationCollections()
+	return su
+}
+
+// ClearAttributesReport clears the "attributes_report" edge to the AttributeReport entity.
+func (su *StatementUpdate) ClearAttributesReport() *StatementUpdate {
+	su.mutation.ClearAttributesReport()
 	return su
 }
 
@@ -272,6 +298,35 @@ func (su *StatementUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if su.mutation.AttributesReportCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   statement.AttributesReportTable,
+			Columns: []string{statement.AttributesReportColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(attributereport.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := su.mutation.AttributesReportIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   statement.AttributesReportTable,
+			Columns: []string{statement.AttributesReportColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(attributereport.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if su.mutation.DsseCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
@@ -385,6 +440,25 @@ func (suo *StatementUpdateOne) SetAttestationCollections(a *AttestationCollectio
 	return suo.SetAttestationCollectionsID(a.ID)
 }
 
+// SetAttributesReportID sets the "attributes_report" edge to the AttributeReport entity by ID.
+func (suo *StatementUpdateOne) SetAttributesReportID(id int) *StatementUpdateOne {
+	suo.mutation.SetAttributesReportID(id)
+	return suo
+}
+
+// SetNillableAttributesReportID sets the "attributes_report" edge to the AttributeReport entity by ID if the given value is not nil.
+func (suo *StatementUpdateOne) SetNillableAttributesReportID(id *int) *StatementUpdateOne {
+	if id != nil {
+		suo = suo.SetAttributesReportID(*id)
+	}
+	return suo
+}
+
+// SetAttributesReport sets the "attributes_report" edge to the AttributeReport entity.
+func (suo *StatementUpdateOne) SetAttributesReport(a *AttributeReport) *StatementUpdateOne {
+	return suo.SetAttributesReportID(a.ID)
+}
+
 // AddDsseIDs adds the "dsse" edge to the Dsse entity by IDs.
 func (suo *StatementUpdateOne) AddDsseIDs(ids ...int) *StatementUpdateOne {
 	suo.mutation.AddDsseIDs(ids...)
@@ -429,6 +503,12 @@ func (suo *StatementUpdateOne) RemoveSubjects(s ...*Subject) *StatementUpdateOne
 // ClearAttestationCollections clears the "attestation_collections" edge to the AttestationCollection entity.
 func (suo *StatementUpdateOne) ClearAttestationCollections() *StatementUpdateOne {
 	suo.mutation.ClearAttestationCollections()
+	return suo
+}
+
+// ClearAttributesReport clears the "attributes_report" edge to the AttributeReport entity.
+func (suo *StatementUpdateOne) ClearAttributesReport() *StatementUpdateOne {
+	suo.mutation.ClearAttributesReport()
 	return suo
 }
 
@@ -602,6 +682,35 @@ func (suo *StatementUpdateOne) sqlSave(ctx context.Context) (_node *Statement, e
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(attestationcollection.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if suo.mutation.AttributesReportCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   statement.AttributesReportTable,
+			Columns: []string{statement.AttributesReportColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(attributereport.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := suo.mutation.AttributesReportIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   statement.AttributesReportTable,
+			Columns: []string{statement.AttributesReportColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(attributereport.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

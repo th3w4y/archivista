@@ -17,6 +17,8 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/in-toto/archivista/ent/attestation"
 	"github.com/in-toto/archivista/ent/attestationcollection"
+	"github.com/in-toto/archivista/ent/attributeassertion"
+	"github.com/in-toto/archivista/ent/attributereport"
 	"github.com/in-toto/archivista/ent/dsse"
 	"github.com/in-toto/archivista/ent/payloaddigest"
 	"github.com/in-toto/archivista/ent/signature"
@@ -35,6 +37,10 @@ type Client struct {
 	Attestation *AttestationClient
 	// AttestationCollection is the client for interacting with the AttestationCollection builders.
 	AttestationCollection *AttestationCollectionClient
+	// AttributeAssertion is the client for interacting with the AttributeAssertion builders.
+	AttributeAssertion *AttributeAssertionClient
+	// AttributeReport is the client for interacting with the AttributeReport builders.
+	AttributeReport *AttributeReportClient
 	// Dsse is the client for interacting with the Dsse builders.
 	Dsse *DsseClient
 	// PayloadDigest is the client for interacting with the PayloadDigest builders.
@@ -64,6 +70,8 @@ func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
 	c.Attestation = NewAttestationClient(c.config)
 	c.AttestationCollection = NewAttestationCollectionClient(c.config)
+	c.AttributeAssertion = NewAttributeAssertionClient(c.config)
+	c.AttributeReport = NewAttributeReportClient(c.config)
 	c.Dsse = NewDsseClient(c.config)
 	c.PayloadDigest = NewPayloadDigestClient(c.config)
 	c.Signature = NewSignatureClient(c.config)
@@ -165,6 +173,8 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		config:                cfg,
 		Attestation:           NewAttestationClient(cfg),
 		AttestationCollection: NewAttestationCollectionClient(cfg),
+		AttributeAssertion:    NewAttributeAssertionClient(cfg),
+		AttributeReport:       NewAttributeReportClient(cfg),
 		Dsse:                  NewDsseClient(cfg),
 		PayloadDigest:         NewPayloadDigestClient(cfg),
 		Signature:             NewSignatureClient(cfg),
@@ -193,6 +203,8 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		config:                cfg,
 		Attestation:           NewAttestationClient(cfg),
 		AttestationCollection: NewAttestationCollectionClient(cfg),
+		AttributeAssertion:    NewAttributeAssertionClient(cfg),
+		AttributeReport:       NewAttributeReportClient(cfg),
 		Dsse:                  NewDsseClient(cfg),
 		PayloadDigest:         NewPayloadDigestClient(cfg),
 		Signature:             NewSignatureClient(cfg),
@@ -229,8 +241,9 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
-		c.Attestation, c.AttestationCollection, c.Dsse, c.PayloadDigest, c.Signature,
-		c.Statement, c.Subject, c.SubjectDigest, c.Timestamp,
+		c.Attestation, c.AttestationCollection, c.AttributeAssertion, c.AttributeReport,
+		c.Dsse, c.PayloadDigest, c.Signature, c.Statement, c.Subject, c.SubjectDigest,
+		c.Timestamp,
 	} {
 		n.Use(hooks...)
 	}
@@ -240,8 +253,9 @@ func (c *Client) Use(hooks ...Hook) {
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
-		c.Attestation, c.AttestationCollection, c.Dsse, c.PayloadDigest, c.Signature,
-		c.Statement, c.Subject, c.SubjectDigest, c.Timestamp,
+		c.Attestation, c.AttestationCollection, c.AttributeAssertion, c.AttributeReport,
+		c.Dsse, c.PayloadDigest, c.Signature, c.Statement, c.Subject, c.SubjectDigest,
+		c.Timestamp,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -254,6 +268,10 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Attestation.mutate(ctx, m)
 	case *AttestationCollectionMutation:
 		return c.AttestationCollection.mutate(ctx, m)
+	case *AttributeAssertionMutation:
+		return c.AttributeAssertion.mutate(ctx, m)
+	case *AttributeReportMutation:
+		return c.AttributeReport.mutate(ctx, m)
 	case *DsseMutation:
 		return c.Dsse.mutate(ctx, m)
 	case *PayloadDigestMutation:
@@ -584,6 +602,320 @@ func (c *AttestationCollectionClient) mutate(ctx context.Context, m *Attestation
 		return (&AttestationCollectionDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown AttestationCollection mutation op: %q", m.Op())
+	}
+}
+
+// AttributeAssertionClient is a client for the AttributeAssertion schema.
+type AttributeAssertionClient struct {
+	config
+}
+
+// NewAttributeAssertionClient returns a client for the AttributeAssertion from the given config.
+func NewAttributeAssertionClient(c config) *AttributeAssertionClient {
+	return &AttributeAssertionClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `attributeassertion.Hooks(f(g(h())))`.
+func (c *AttributeAssertionClient) Use(hooks ...Hook) {
+	c.hooks.AttributeAssertion = append(c.hooks.AttributeAssertion, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `attributeassertion.Intercept(f(g(h())))`.
+func (c *AttributeAssertionClient) Intercept(interceptors ...Interceptor) {
+	c.inters.AttributeAssertion = append(c.inters.AttributeAssertion, interceptors...)
+}
+
+// Create returns a builder for creating a AttributeAssertion entity.
+func (c *AttributeAssertionClient) Create() *AttributeAssertionCreate {
+	mutation := newAttributeAssertionMutation(c.config, OpCreate)
+	return &AttributeAssertionCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of AttributeAssertion entities.
+func (c *AttributeAssertionClient) CreateBulk(builders ...*AttributeAssertionCreate) *AttributeAssertionCreateBulk {
+	return &AttributeAssertionCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *AttributeAssertionClient) MapCreateBulk(slice any, setFunc func(*AttributeAssertionCreate, int)) *AttributeAssertionCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &AttributeAssertionCreateBulk{err: fmt.Errorf("calling to AttributeAssertionClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*AttributeAssertionCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &AttributeAssertionCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for AttributeAssertion.
+func (c *AttributeAssertionClient) Update() *AttributeAssertionUpdate {
+	mutation := newAttributeAssertionMutation(c.config, OpUpdate)
+	return &AttributeAssertionUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *AttributeAssertionClient) UpdateOne(aa *AttributeAssertion) *AttributeAssertionUpdateOne {
+	mutation := newAttributeAssertionMutation(c.config, OpUpdateOne, withAttributeAssertion(aa))
+	return &AttributeAssertionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *AttributeAssertionClient) UpdateOneID(id int) *AttributeAssertionUpdateOne {
+	mutation := newAttributeAssertionMutation(c.config, OpUpdateOne, withAttributeAssertionID(id))
+	return &AttributeAssertionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for AttributeAssertion.
+func (c *AttributeAssertionClient) Delete() *AttributeAssertionDelete {
+	mutation := newAttributeAssertionMutation(c.config, OpDelete)
+	return &AttributeAssertionDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *AttributeAssertionClient) DeleteOne(aa *AttributeAssertion) *AttributeAssertionDeleteOne {
+	return c.DeleteOneID(aa.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *AttributeAssertionClient) DeleteOneID(id int) *AttributeAssertionDeleteOne {
+	builder := c.Delete().Where(attributeassertion.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &AttributeAssertionDeleteOne{builder}
+}
+
+// Query returns a query builder for AttributeAssertion.
+func (c *AttributeAssertionClient) Query() *AttributeAssertionQuery {
+	return &AttributeAssertionQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeAttributeAssertion},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a AttributeAssertion entity by its id.
+func (c *AttributeAssertionClient) Get(ctx context.Context, id int) (*AttributeAssertion, error) {
+	return c.Query().Where(attributeassertion.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *AttributeAssertionClient) GetX(ctx context.Context, id int) *AttributeAssertion {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryAttributesReport queries the attributes_report edge of a AttributeAssertion.
+func (c *AttributeAssertionClient) QueryAttributesReport(aa *AttributeAssertion) *AttributeReportQuery {
+	query := (&AttributeReportClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := aa.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(attributeassertion.Table, attributeassertion.FieldID, id),
+			sqlgraph.To(attributereport.Table, attributereport.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, attributeassertion.AttributesReportTable, attributeassertion.AttributesReportColumn),
+		)
+		fromV = sqlgraph.Neighbors(aa.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *AttributeAssertionClient) Hooks() []Hook {
+	return c.hooks.AttributeAssertion
+}
+
+// Interceptors returns the client interceptors.
+func (c *AttributeAssertionClient) Interceptors() []Interceptor {
+	return c.inters.AttributeAssertion
+}
+
+func (c *AttributeAssertionClient) mutate(ctx context.Context, m *AttributeAssertionMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&AttributeAssertionCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&AttributeAssertionUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&AttributeAssertionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&AttributeAssertionDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown AttributeAssertion mutation op: %q", m.Op())
+	}
+}
+
+// AttributeReportClient is a client for the AttributeReport schema.
+type AttributeReportClient struct {
+	config
+}
+
+// NewAttributeReportClient returns a client for the AttributeReport from the given config.
+func NewAttributeReportClient(c config) *AttributeReportClient {
+	return &AttributeReportClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `attributereport.Hooks(f(g(h())))`.
+func (c *AttributeReportClient) Use(hooks ...Hook) {
+	c.hooks.AttributeReport = append(c.hooks.AttributeReport, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `attributereport.Intercept(f(g(h())))`.
+func (c *AttributeReportClient) Intercept(interceptors ...Interceptor) {
+	c.inters.AttributeReport = append(c.inters.AttributeReport, interceptors...)
+}
+
+// Create returns a builder for creating a AttributeReport entity.
+func (c *AttributeReportClient) Create() *AttributeReportCreate {
+	mutation := newAttributeReportMutation(c.config, OpCreate)
+	return &AttributeReportCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of AttributeReport entities.
+func (c *AttributeReportClient) CreateBulk(builders ...*AttributeReportCreate) *AttributeReportCreateBulk {
+	return &AttributeReportCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *AttributeReportClient) MapCreateBulk(slice any, setFunc func(*AttributeReportCreate, int)) *AttributeReportCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &AttributeReportCreateBulk{err: fmt.Errorf("calling to AttributeReportClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*AttributeReportCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &AttributeReportCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for AttributeReport.
+func (c *AttributeReportClient) Update() *AttributeReportUpdate {
+	mutation := newAttributeReportMutation(c.config, OpUpdate)
+	return &AttributeReportUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *AttributeReportClient) UpdateOne(ar *AttributeReport) *AttributeReportUpdateOne {
+	mutation := newAttributeReportMutation(c.config, OpUpdateOne, withAttributeReport(ar))
+	return &AttributeReportUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *AttributeReportClient) UpdateOneID(id int) *AttributeReportUpdateOne {
+	mutation := newAttributeReportMutation(c.config, OpUpdateOne, withAttributeReportID(id))
+	return &AttributeReportUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for AttributeReport.
+func (c *AttributeReportClient) Delete() *AttributeReportDelete {
+	mutation := newAttributeReportMutation(c.config, OpDelete)
+	return &AttributeReportDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *AttributeReportClient) DeleteOne(ar *AttributeReport) *AttributeReportDeleteOne {
+	return c.DeleteOneID(ar.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *AttributeReportClient) DeleteOneID(id int) *AttributeReportDeleteOne {
+	builder := c.Delete().Where(attributereport.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &AttributeReportDeleteOne{builder}
+}
+
+// Query returns a query builder for AttributeReport.
+func (c *AttributeReportClient) Query() *AttributeReportQuery {
+	return &AttributeReportQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeAttributeReport},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a AttributeReport entity by its id.
+func (c *AttributeReportClient) Get(ctx context.Context, id int) (*AttributeReport, error) {
+	return c.Query().Where(attributereport.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *AttributeReportClient) GetX(ctx context.Context, id int) *AttributeReport {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryAttributes queries the attributes edge of a AttributeReport.
+func (c *AttributeReportClient) QueryAttributes(ar *AttributeReport) *AttributeAssertionQuery {
+	query := (&AttributeAssertionClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := ar.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(attributereport.Table, attributereport.FieldID, id),
+			sqlgraph.To(attributeassertion.Table, attributeassertion.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, attributereport.AttributesTable, attributereport.AttributesColumn),
+		)
+		fromV = sqlgraph.Neighbors(ar.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryStatement queries the statement edge of a AttributeReport.
+func (c *AttributeReportClient) QueryStatement(ar *AttributeReport) *StatementQuery {
+	query := (&StatementClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := ar.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(attributereport.Table, attributereport.FieldID, id),
+			sqlgraph.To(statement.Table, statement.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, attributereport.StatementTable, attributereport.StatementColumn),
+		)
+		fromV = sqlgraph.Neighbors(ar.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *AttributeReportClient) Hooks() []Hook {
+	return c.hooks.AttributeReport
+}
+
+// Interceptors returns the client interceptors.
+func (c *AttributeReportClient) Interceptors() []Interceptor {
+	return c.inters.AttributeReport
+}
+
+func (c *AttributeReportClient) mutate(ctx context.Context, m *AttributeReportMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&AttributeReportCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&AttributeReportUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&AttributeReportUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&AttributeReportDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown AttributeReport mutation op: %q", m.Op())
 	}
 }
 
@@ -1222,6 +1554,22 @@ func (c *StatementClient) QueryAttestationCollections(s *Statement) *Attestation
 	return query
 }
 
+// QueryAttributesReport queries the attributes_report edge of a Statement.
+func (c *StatementClient) QueryAttributesReport(s *Statement) *AttributeReportQuery {
+	query := (&AttributeReportClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := s.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(statement.Table, statement.FieldID, id),
+			sqlgraph.To(attributereport.Table, attributereport.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, statement.AttributesReportTable, statement.AttributesReportColumn),
+		)
+		fromV = sqlgraph.Neighbors(s.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryDsse queries the dsse edge of a Statement.
 func (c *StatementClient) QueryDsse(s *Statement) *DsseQuery {
 	query := (&DsseClient{config: c.config}).Query()
@@ -1729,11 +2077,13 @@ func (c *TimestampClient) mutate(ctx context.Context, m *TimestampMutation) (Val
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		Attestation, AttestationCollection, Dsse, PayloadDigest, Signature, Statement,
-		Subject, SubjectDigest, Timestamp []ent.Hook
+		Attestation, AttestationCollection, AttributeAssertion, AttributeReport, Dsse,
+		PayloadDigest, Signature, Statement, Subject, SubjectDigest,
+		Timestamp []ent.Hook
 	}
 	inters struct {
-		Attestation, AttestationCollection, Dsse, PayloadDigest, Signature, Statement,
-		Subject, SubjectDigest, Timestamp []ent.Interceptor
+		Attestation, AttestationCollection, AttributeAssertion, AttributeReport, Dsse,
+		PayloadDigest, Signature, Statement, Subject, SubjectDigest,
+		Timestamp []ent.Interceptor
 	}
 )

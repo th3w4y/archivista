@@ -9,6 +9,8 @@ import (
 
 	"github.com/in-toto/archivista/ent/attestation"
 	"github.com/in-toto/archivista/ent/attestationcollection"
+	"github.com/in-toto/archivista/ent/attributeassertion"
+	"github.com/in-toto/archivista/ent/attributereport"
 	"github.com/in-toto/archivista/ent/dsse"
 	"github.com/in-toto/archivista/ent/payloaddigest"
 	"github.com/in-toto/archivista/ent/predicate"
@@ -438,6 +440,374 @@ func (i *AttestationCollectionWhereInput) P() (predicate.AttestationCollection, 
 		return predicates[0], nil
 	default:
 		return attestationcollection.And(predicates...), nil
+	}
+}
+
+// AttributeAssertionWhereInput represents a where input for filtering AttributeAssertion queries.
+type AttributeAssertionWhereInput struct {
+	Predicates []predicate.AttributeAssertion  `json:"-"`
+	Not        *AttributeAssertionWhereInput   `json:"not,omitempty"`
+	Or         []*AttributeAssertionWhereInput `json:"or,omitempty"`
+	And        []*AttributeAssertionWhereInput `json:"and,omitempty"`
+
+	// "id" field predicates.
+	ID      *int  `json:"id,omitempty"`
+	IDNEQ   *int  `json:"idNEQ,omitempty"`
+	IDIn    []int `json:"idIn,omitempty"`
+	IDNotIn []int `json:"idNotIn,omitempty"`
+	IDGT    *int  `json:"idGT,omitempty"`
+	IDGTE   *int  `json:"idGTE,omitempty"`
+	IDLT    *int  `json:"idLT,omitempty"`
+	IDLTE   *int  `json:"idLTE,omitempty"`
+
+	// "attribute" field predicates.
+	Attribute             *string  `json:"attribute,omitempty"`
+	AttributeNEQ          *string  `json:"attributeNEQ,omitempty"`
+	AttributeIn           []string `json:"attributeIn,omitempty"`
+	AttributeNotIn        []string `json:"attributeNotIn,omitempty"`
+	AttributeGT           *string  `json:"attributeGT,omitempty"`
+	AttributeGTE          *string  `json:"attributeGTE,omitempty"`
+	AttributeLT           *string  `json:"attributeLT,omitempty"`
+	AttributeLTE          *string  `json:"attributeLTE,omitempty"`
+	AttributeContains     *string  `json:"attributeContains,omitempty"`
+	AttributeHasPrefix    *string  `json:"attributeHasPrefix,omitempty"`
+	AttributeHasSuffix    *string  `json:"attributeHasSuffix,omitempty"`
+	AttributeEqualFold    *string  `json:"attributeEqualFold,omitempty"`
+	AttributeContainsFold *string  `json:"attributeContainsFold,omitempty"`
+
+	// "attributes_report" edge predicates.
+	HasAttributesReport     *bool                        `json:"hasAttributesReport,omitempty"`
+	HasAttributesReportWith []*AttributeReportWhereInput `json:"hasAttributesReportWith,omitempty"`
+}
+
+// AddPredicates adds custom predicates to the where input to be used during the filtering phase.
+func (i *AttributeAssertionWhereInput) AddPredicates(predicates ...predicate.AttributeAssertion) {
+	i.Predicates = append(i.Predicates, predicates...)
+}
+
+// Filter applies the AttributeAssertionWhereInput filter on the AttributeAssertionQuery builder.
+func (i *AttributeAssertionWhereInput) Filter(q *AttributeAssertionQuery) (*AttributeAssertionQuery, error) {
+	if i == nil {
+		return q, nil
+	}
+	p, err := i.P()
+	if err != nil {
+		if err == ErrEmptyAttributeAssertionWhereInput {
+			return q, nil
+		}
+		return nil, err
+	}
+	return q.Where(p), nil
+}
+
+// ErrEmptyAttributeAssertionWhereInput is returned in case the AttributeAssertionWhereInput is empty.
+var ErrEmptyAttributeAssertionWhereInput = errors.New("ent: empty predicate AttributeAssertionWhereInput")
+
+// P returns a predicate for filtering attributeassertions.
+// An error is returned if the input is empty or invalid.
+func (i *AttributeAssertionWhereInput) P() (predicate.AttributeAssertion, error) {
+	var predicates []predicate.AttributeAssertion
+	if i.Not != nil {
+		p, err := i.Not.P()
+		if err != nil {
+			return nil, fmt.Errorf("%w: field 'not'", err)
+		}
+		predicates = append(predicates, attributeassertion.Not(p))
+	}
+	switch n := len(i.Or); {
+	case n == 1:
+		p, err := i.Or[0].P()
+		if err != nil {
+			return nil, fmt.Errorf("%w: field 'or'", err)
+		}
+		predicates = append(predicates, p)
+	case n > 1:
+		or := make([]predicate.AttributeAssertion, 0, n)
+		for _, w := range i.Or {
+			p, err := w.P()
+			if err != nil {
+				return nil, fmt.Errorf("%w: field 'or'", err)
+			}
+			or = append(or, p)
+		}
+		predicates = append(predicates, attributeassertion.Or(or...))
+	}
+	switch n := len(i.And); {
+	case n == 1:
+		p, err := i.And[0].P()
+		if err != nil {
+			return nil, fmt.Errorf("%w: field 'and'", err)
+		}
+		predicates = append(predicates, p)
+	case n > 1:
+		and := make([]predicate.AttributeAssertion, 0, n)
+		for _, w := range i.And {
+			p, err := w.P()
+			if err != nil {
+				return nil, fmt.Errorf("%w: field 'and'", err)
+			}
+			and = append(and, p)
+		}
+		predicates = append(predicates, attributeassertion.And(and...))
+	}
+	predicates = append(predicates, i.Predicates...)
+	if i.ID != nil {
+		predicates = append(predicates, attributeassertion.IDEQ(*i.ID))
+	}
+	if i.IDNEQ != nil {
+		predicates = append(predicates, attributeassertion.IDNEQ(*i.IDNEQ))
+	}
+	if len(i.IDIn) > 0 {
+		predicates = append(predicates, attributeassertion.IDIn(i.IDIn...))
+	}
+	if len(i.IDNotIn) > 0 {
+		predicates = append(predicates, attributeassertion.IDNotIn(i.IDNotIn...))
+	}
+	if i.IDGT != nil {
+		predicates = append(predicates, attributeassertion.IDGT(*i.IDGT))
+	}
+	if i.IDGTE != nil {
+		predicates = append(predicates, attributeassertion.IDGTE(*i.IDGTE))
+	}
+	if i.IDLT != nil {
+		predicates = append(predicates, attributeassertion.IDLT(*i.IDLT))
+	}
+	if i.IDLTE != nil {
+		predicates = append(predicates, attributeassertion.IDLTE(*i.IDLTE))
+	}
+	if i.Attribute != nil {
+		predicates = append(predicates, attributeassertion.AttributeEQ(*i.Attribute))
+	}
+	if i.AttributeNEQ != nil {
+		predicates = append(predicates, attributeassertion.AttributeNEQ(*i.AttributeNEQ))
+	}
+	if len(i.AttributeIn) > 0 {
+		predicates = append(predicates, attributeassertion.AttributeIn(i.AttributeIn...))
+	}
+	if len(i.AttributeNotIn) > 0 {
+		predicates = append(predicates, attributeassertion.AttributeNotIn(i.AttributeNotIn...))
+	}
+	if i.AttributeGT != nil {
+		predicates = append(predicates, attributeassertion.AttributeGT(*i.AttributeGT))
+	}
+	if i.AttributeGTE != nil {
+		predicates = append(predicates, attributeassertion.AttributeGTE(*i.AttributeGTE))
+	}
+	if i.AttributeLT != nil {
+		predicates = append(predicates, attributeassertion.AttributeLT(*i.AttributeLT))
+	}
+	if i.AttributeLTE != nil {
+		predicates = append(predicates, attributeassertion.AttributeLTE(*i.AttributeLTE))
+	}
+	if i.AttributeContains != nil {
+		predicates = append(predicates, attributeassertion.AttributeContains(*i.AttributeContains))
+	}
+	if i.AttributeHasPrefix != nil {
+		predicates = append(predicates, attributeassertion.AttributeHasPrefix(*i.AttributeHasPrefix))
+	}
+	if i.AttributeHasSuffix != nil {
+		predicates = append(predicates, attributeassertion.AttributeHasSuffix(*i.AttributeHasSuffix))
+	}
+	if i.AttributeEqualFold != nil {
+		predicates = append(predicates, attributeassertion.AttributeEqualFold(*i.AttributeEqualFold))
+	}
+	if i.AttributeContainsFold != nil {
+		predicates = append(predicates, attributeassertion.AttributeContainsFold(*i.AttributeContainsFold))
+	}
+
+	if i.HasAttributesReport != nil {
+		p := attributeassertion.HasAttributesReport()
+		if !*i.HasAttributesReport {
+			p = attributeassertion.Not(p)
+		}
+		predicates = append(predicates, p)
+	}
+	if len(i.HasAttributesReportWith) > 0 {
+		with := make([]predicate.AttributeReport, 0, len(i.HasAttributesReportWith))
+		for _, w := range i.HasAttributesReportWith {
+			p, err := w.P()
+			if err != nil {
+				return nil, fmt.Errorf("%w: field 'HasAttributesReportWith'", err)
+			}
+			with = append(with, p)
+		}
+		predicates = append(predicates, attributeassertion.HasAttributesReportWith(with...))
+	}
+	switch len(predicates) {
+	case 0:
+		return nil, ErrEmptyAttributeAssertionWhereInput
+	case 1:
+		return predicates[0], nil
+	default:
+		return attributeassertion.And(predicates...), nil
+	}
+}
+
+// AttributeReportWhereInput represents a where input for filtering AttributeReport queries.
+type AttributeReportWhereInput struct {
+	Predicates []predicate.AttributeReport  `json:"-"`
+	Not        *AttributeReportWhereInput   `json:"not,omitempty"`
+	Or         []*AttributeReportWhereInput `json:"or,omitempty"`
+	And        []*AttributeReportWhereInput `json:"and,omitempty"`
+
+	// "id" field predicates.
+	ID      *int  `json:"id,omitempty"`
+	IDNEQ   *int  `json:"idNEQ,omitempty"`
+	IDIn    []int `json:"idIn,omitempty"`
+	IDNotIn []int `json:"idNotIn,omitempty"`
+	IDGT    *int  `json:"idGT,omitempty"`
+	IDGTE   *int  `json:"idGTE,omitempty"`
+	IDLT    *int  `json:"idLT,omitempty"`
+	IDLTE   *int  `json:"idLTE,omitempty"`
+
+	// "attributes" edge predicates.
+	HasAttributes     *bool                           `json:"hasAttributes,omitempty"`
+	HasAttributesWith []*AttributeAssertionWhereInput `json:"hasAttributesWith,omitempty"`
+
+	// "statement" edge predicates.
+	HasStatement     *bool                  `json:"hasStatement,omitempty"`
+	HasStatementWith []*StatementWhereInput `json:"hasStatementWith,omitempty"`
+}
+
+// AddPredicates adds custom predicates to the where input to be used during the filtering phase.
+func (i *AttributeReportWhereInput) AddPredicates(predicates ...predicate.AttributeReport) {
+	i.Predicates = append(i.Predicates, predicates...)
+}
+
+// Filter applies the AttributeReportWhereInput filter on the AttributeReportQuery builder.
+func (i *AttributeReportWhereInput) Filter(q *AttributeReportQuery) (*AttributeReportQuery, error) {
+	if i == nil {
+		return q, nil
+	}
+	p, err := i.P()
+	if err != nil {
+		if err == ErrEmptyAttributeReportWhereInput {
+			return q, nil
+		}
+		return nil, err
+	}
+	return q.Where(p), nil
+}
+
+// ErrEmptyAttributeReportWhereInput is returned in case the AttributeReportWhereInput is empty.
+var ErrEmptyAttributeReportWhereInput = errors.New("ent: empty predicate AttributeReportWhereInput")
+
+// P returns a predicate for filtering attributereports.
+// An error is returned if the input is empty or invalid.
+func (i *AttributeReportWhereInput) P() (predicate.AttributeReport, error) {
+	var predicates []predicate.AttributeReport
+	if i.Not != nil {
+		p, err := i.Not.P()
+		if err != nil {
+			return nil, fmt.Errorf("%w: field 'not'", err)
+		}
+		predicates = append(predicates, attributereport.Not(p))
+	}
+	switch n := len(i.Or); {
+	case n == 1:
+		p, err := i.Or[0].P()
+		if err != nil {
+			return nil, fmt.Errorf("%w: field 'or'", err)
+		}
+		predicates = append(predicates, p)
+	case n > 1:
+		or := make([]predicate.AttributeReport, 0, n)
+		for _, w := range i.Or {
+			p, err := w.P()
+			if err != nil {
+				return nil, fmt.Errorf("%w: field 'or'", err)
+			}
+			or = append(or, p)
+		}
+		predicates = append(predicates, attributereport.Or(or...))
+	}
+	switch n := len(i.And); {
+	case n == 1:
+		p, err := i.And[0].P()
+		if err != nil {
+			return nil, fmt.Errorf("%w: field 'and'", err)
+		}
+		predicates = append(predicates, p)
+	case n > 1:
+		and := make([]predicate.AttributeReport, 0, n)
+		for _, w := range i.And {
+			p, err := w.P()
+			if err != nil {
+				return nil, fmt.Errorf("%w: field 'and'", err)
+			}
+			and = append(and, p)
+		}
+		predicates = append(predicates, attributereport.And(and...))
+	}
+	predicates = append(predicates, i.Predicates...)
+	if i.ID != nil {
+		predicates = append(predicates, attributereport.IDEQ(*i.ID))
+	}
+	if i.IDNEQ != nil {
+		predicates = append(predicates, attributereport.IDNEQ(*i.IDNEQ))
+	}
+	if len(i.IDIn) > 0 {
+		predicates = append(predicates, attributereport.IDIn(i.IDIn...))
+	}
+	if len(i.IDNotIn) > 0 {
+		predicates = append(predicates, attributereport.IDNotIn(i.IDNotIn...))
+	}
+	if i.IDGT != nil {
+		predicates = append(predicates, attributereport.IDGT(*i.IDGT))
+	}
+	if i.IDGTE != nil {
+		predicates = append(predicates, attributereport.IDGTE(*i.IDGTE))
+	}
+	if i.IDLT != nil {
+		predicates = append(predicates, attributereport.IDLT(*i.IDLT))
+	}
+	if i.IDLTE != nil {
+		predicates = append(predicates, attributereport.IDLTE(*i.IDLTE))
+	}
+
+	if i.HasAttributes != nil {
+		p := attributereport.HasAttributes()
+		if !*i.HasAttributes {
+			p = attributereport.Not(p)
+		}
+		predicates = append(predicates, p)
+	}
+	if len(i.HasAttributesWith) > 0 {
+		with := make([]predicate.AttributeAssertion, 0, len(i.HasAttributesWith))
+		for _, w := range i.HasAttributesWith {
+			p, err := w.P()
+			if err != nil {
+				return nil, fmt.Errorf("%w: field 'HasAttributesWith'", err)
+			}
+			with = append(with, p)
+		}
+		predicates = append(predicates, attributereport.HasAttributesWith(with...))
+	}
+	if i.HasStatement != nil {
+		p := attributereport.HasStatement()
+		if !*i.HasStatement {
+			p = attributereport.Not(p)
+		}
+		predicates = append(predicates, p)
+	}
+	if len(i.HasStatementWith) > 0 {
+		with := make([]predicate.Statement, 0, len(i.HasStatementWith))
+		for _, w := range i.HasStatementWith {
+			p, err := w.P()
+			if err != nil {
+				return nil, fmt.Errorf("%w: field 'HasStatementWith'", err)
+			}
+			with = append(with, p)
+		}
+		predicates = append(predicates, attributereport.HasStatementWith(with...))
+	}
+	switch len(predicates) {
+	case 0:
+		return nil, ErrEmptyAttributeReportWhereInput
+	case 1:
+		return predicates[0], nil
+	default:
+		return attributereport.And(predicates...), nil
 	}
 }
 
@@ -1309,6 +1679,10 @@ type StatementWhereInput struct {
 	HasAttestationCollections     *bool                              `json:"hasAttestationCollections,omitempty"`
 	HasAttestationCollectionsWith []*AttestationCollectionWhereInput `json:"hasAttestationCollectionsWith,omitempty"`
 
+	// "attributes_report" edge predicates.
+	HasAttributesReport     *bool                        `json:"hasAttributesReport,omitempty"`
+	HasAttributesReportWith []*AttributeReportWhereInput `json:"hasAttributesReportWith,omitempty"`
+
 	// "dsse" edge predicates.
 	HasDsse     *bool             `json:"hasDsse,omitempty"`
 	HasDsseWith []*DsseWhereInput `json:"hasDsseWith,omitempty"`
@@ -1484,6 +1858,24 @@ func (i *StatementWhereInput) P() (predicate.Statement, error) {
 			with = append(with, p)
 		}
 		predicates = append(predicates, statement.HasAttestationCollectionsWith(with...))
+	}
+	if i.HasAttributesReport != nil {
+		p := statement.HasAttributesReport()
+		if !*i.HasAttributesReport {
+			p = statement.Not(p)
+		}
+		predicates = append(predicates, p)
+	}
+	if len(i.HasAttributesReportWith) > 0 {
+		with := make([]predicate.AttributeReport, 0, len(i.HasAttributesReportWith))
+		for _, w := range i.HasAttributesReportWith {
+			p, err := w.P()
+			if err != nil {
+				return nil, fmt.Errorf("%w: field 'HasAttributesReportWith'", err)
+			}
+			with = append(with, p)
+		}
+		predicates = append(predicates, statement.HasAttributesReportWith(with...))
 	}
 	if i.HasDsse != nil {
 		p := statement.HasDsse()

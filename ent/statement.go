@@ -9,6 +9,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/in-toto/archivista/ent/attestationcollection"
+	"github.com/in-toto/archivista/ent/attributereport"
 	"github.com/in-toto/archivista/ent/statement"
 )
 
@@ -31,13 +32,15 @@ type StatementEdges struct {
 	Subjects []*Subject `json:"subjects,omitempty"`
 	// AttestationCollections holds the value of the attestation_collections edge.
 	AttestationCollections *AttestationCollection `json:"attestation_collections,omitempty"`
+	// AttributesReport holds the value of the attributes_report edge.
+	AttributesReport *AttributeReport `json:"attributes_report,omitempty"`
 	// Dsse holds the value of the dsse edge.
 	Dsse []*Dsse `json:"dsse,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [3]bool
+	loadedTypes [4]bool
 	// totalCount holds the count of the edges above.
-	totalCount [3]map[string]int
+	totalCount [4]map[string]int
 
 	namedSubjects map[string][]*Subject
 	namedDsse     map[string][]*Dsse
@@ -65,10 +68,23 @@ func (e StatementEdges) AttestationCollectionsOrErr() (*AttestationCollection, e
 	return nil, &NotLoadedError{edge: "attestation_collections"}
 }
 
+// AttributesReportOrErr returns the AttributesReport value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e StatementEdges) AttributesReportOrErr() (*AttributeReport, error) {
+	if e.loadedTypes[2] {
+		if e.AttributesReport == nil {
+			// Edge was loaded but was not found.
+			return nil, &NotFoundError{label: attributereport.Label}
+		}
+		return e.AttributesReport, nil
+	}
+	return nil, &NotLoadedError{edge: "attributes_report"}
+}
+
 // DsseOrErr returns the Dsse value or an error if the edge
 // was not loaded in eager-loading.
 func (e StatementEdges) DsseOrErr() ([]*Dsse, error) {
-	if e.loadedTypes[2] {
+	if e.loadedTypes[3] {
 		return e.Dsse, nil
 	}
 	return nil, &NotLoadedError{edge: "dsse"}
@@ -131,6 +147,11 @@ func (s *Statement) QuerySubjects() *SubjectQuery {
 // QueryAttestationCollections queries the "attestation_collections" edge of the Statement entity.
 func (s *Statement) QueryAttestationCollections() *AttestationCollectionQuery {
 	return NewStatementClient(s.config).QueryAttestationCollections(s)
+}
+
+// QueryAttributesReport queries the "attributes_report" edge of the Statement entity.
+func (s *Statement) QueryAttributesReport() *AttributeReportQuery {
+	return NewStatementClient(s.config).QueryAttributesReport(s)
 }
 
 // QueryDsse queries the "dsse" edge of the Statement entity.
