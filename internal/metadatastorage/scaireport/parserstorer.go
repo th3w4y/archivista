@@ -56,9 +56,18 @@ func (parsedReport ParsedAtributesReport) Store(ctx context.Context, tx *ent.Tx,
 	}
 
 	for _, a := range parsedReport.Attributes {
+		target := make(map[string]interface{})
+		json.Unmarshal(a.Target, &target)
+		conditions := make(map[string]interface{})
+		json.Unmarshal(a.Conditions, &conditions)
+		evidence := make(map[string]interface{})
+		json.Unmarshal(a.Evidence, &evidence)
 		if err := tx.AttributeAssertion.Create().
 			SetAttributesReportID(report.ID).
 			SetAttribute(a.Attribute).
+			SetTarget(target).
+			SetConditions(conditions).
+			SetEvidence(evidence).
 			Exec(ctx); err != nil {
 			return err
 		}
