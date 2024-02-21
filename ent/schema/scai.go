@@ -30,8 +30,7 @@ type AttributeAssertion struct {
 // Fields of the AttributeAssertion.
 func (AttributeAssertion) Fields() []ent.Field {
 	return []ent.Field{
-		field.String("attribute").
-			Unique(),
+		field.String("attribute"),
 		field.JSON("target", map[string]interface{}{}).
 			Optional(),
 		field.JSON("conditions", map[string]interface{}{}).

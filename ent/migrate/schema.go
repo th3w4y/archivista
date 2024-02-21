@@ -65,7 +65,7 @@ var (
 	// AttributeAssertionsColumns holds the columns for the "attribute_assertions" table.
 	AttributeAssertionsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
-		{Name: "attribute", Type: field.TypeString, Unique: true},
+		{Name: "attribute", Type: field.TypeString},
 		{Name: "target", Type: field.TypeJSON, Nullable: true},
 		{Name: "conditions", Type: field.TypeJSON, Nullable: true},
 		{Name: "evidence", Type: field.TypeJSON, Nullable: true},
